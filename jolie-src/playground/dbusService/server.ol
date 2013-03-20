@@ -1,7 +1,7 @@
 include "TwiceInterface.iol"
 
 inputPort TwiceService {
-	Location: "socket://localhost:8000"
+	Location: "dbus:session:/me/soeholm/coolbus"
 	Protocol: sodep
 	Interfaces: TwiceInterface
 }
