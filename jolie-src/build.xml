@@ -224,6 +224,7 @@ java -cp $JOLIE_HOME/jolie.jar:$JOLIE_HOME/lib/libjolie.jar:$JOLIE_HOME/tools/jo
 		<ant antfile="${project.sodeps}/build.xml" inheritall="false" target="jar"/>
 		<ant antfile="${project.xmlrpc}/build.xml" inheritall="false" target="jar"/>
 		<ant antfile="${project.localsocket}/build.xml" inheritall="false" target="jar"/>
+		<ant antfile="${project.dbus}/build.xml" inheritall="false" target="jar"/>
 		<ant antfile="${project.metaservice-java}/build.xml" inheritall="false" target="jar"/>
 		<ant antfile="${project.monitorJavaServices}/build.xml" inheritall="false" target="jar"/>
 		<ant antfile="${project.coreJavaServices}/build.xml" inheritall="false" target="jar"/>
@@ -260,6 +261,7 @@ java -cp $JOLIE_HOME/jolie.jar:$JOLIE_HOME/lib/libjolie.jar:$JOLIE_HOME/tools/jo
 		<ant antfile="${project.joliec}/build.xml" inheritall="false" target="clean"/>
 		<ant antfile="${project.jolie2java}/build.xml" inheritall="false" target="clean"/>
 		<ant antfile="${project.localsocket}/build.xml" inheritall="false" target="clean"/>
+		<ant antfile="${project.dbus}/build.xml" inheritall="false" target="clean"/>
 		<ant antfile="${project.metaservice-java}/build.xml" inheritall="false" target="clean"/>
 		<ant antfile="${project.coreJavaServices}/build.xml" inheritall="false" target="clean"/>
 		<ant antfile="${project.monitorJavaServices}/build.xml" inheritall="false" target="clean"/>
@@ -297,6 +299,7 @@ java -cp $JOLIE_HOME/jolie.jar:$JOLIE_HOME/lib/libjolie.jar:$JOLIE_HOME/tools/jo
 				<file file="${project.sodeps}/dist/sodeps.jar"/>
 				<file file="${project.xmlrpc}/dist/xmlrpc.jar"/>
 				<file file="${project.localsocket}/dist/localsocket.jar"/>
+				<file file="${project.dbus}/dist/dbus.jar"/>
 			</resources>
 		</copy>
 		<copy todir="dist/javaServices" flatten="true">
