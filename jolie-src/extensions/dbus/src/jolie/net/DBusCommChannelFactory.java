@@ -26,6 +26,7 @@ import cx.ath.matthew.unix.UnixSocketAddress;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.ExecutionException;
 import jolie.net.ext.CommChannelFactory;
 import jolie.runtime.AndJarDeps;
 
@@ -42,7 +43,13 @@ public class DBusCommChannelFactory extends CommChannelFactory
 	{
 		CommChannel ret = null;
 		
-                // TODO: Implement
+                try {
+                    ret = new DBusCommChannel(location, port.getProtocol());
+                }
+                catch (URISyntaxException ex)
+                {
+                    System.out.println("Failed to create D-Bus communication channel");
+                }
                                 
 		return ret;
 	}

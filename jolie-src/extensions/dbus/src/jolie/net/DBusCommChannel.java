@@ -31,7 +31,7 @@ import jolie.net.protocols.CommProtocol;
 
 public class DBusCommChannel extends StreamingCommChannel implements PollableCommChannel
 {
-	public DBusCommChannel( UnixSocket socket, URI location, CommProtocol protocol )
+	public DBusCommChannel( URI location, CommProtocol protocol )
 		throws IOException
 	{
 		super( location, protocol );
@@ -42,7 +42,7 @@ public class DBusCommChannel extends StreamingCommChannel implements PollableCom
 	protected void sendImpl( CommMessage message )
 		throws IOException
 	{
-		// TODO: Implement?
+                // TODO: Implement?
 	}
 	
 	protected CommMessage recvImpl()

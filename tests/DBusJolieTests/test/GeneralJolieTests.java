@@ -69,4 +69,31 @@ public class GeneralJolieTests {
         System.setOut(myOut);
         Jolie.main(args);
     }
+    
+    // The jolie program to call NextPage of Okular D-Bus API
+    @Test
+    public void okularNextPage() {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "jolie-programs/NextPage.ol", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*", // Load D-Bus extension, 
+            "-l", "../../jolie-src/extensions/sodep/dist/*", // TODO: Figure how to make Jolie not require a protocol when using D-Bus (Until then we just reference sodep without using it)
+            "-l", "../../jolie-src/lib/libmatthew" // unix.jar (TODO: D-Bus extension should reference this on its own?)
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        
+        exit.expectSystemExitWithStatus(0);
+        exit.checkAssertionAfterwards(new Assertion() {
+            // Assert
+            @Override
+            public void checkAssertion() {
+                System.setOut(stdOut);
+                assertTrue(true);
+            }
+        });
+        
+        // Act
+        System.setOut(myOut);
+        Jolie.main(args);
+    }
 }
