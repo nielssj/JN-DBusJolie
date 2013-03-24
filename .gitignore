@@ -3,3 +3,4 @@ build/
 .svn
 private.properties
 *.*~
+/tests/DBusJolieTests/nbproject/private/
