@@ -13,10 +13,15 @@ D-Bus support for Jolie
 
 ***
 
-**To load additional extensions or libraries:**
+**To load additional jolie extensions or general java libraries:**
 - Reference their .jar files in the jolie project (Right-click on "Libraries" and choose "Add JAR/Folder..")
 
 NOTE: If the .jar files of extensions such as dbus are loaded correctly (from their own `/dist` folder) the NetBeans debugger will be able to use the source to aid debugging.
+
+***
+
+**To include the standard jolie language libraries (e.g. console.iol)**
+- Add an argument: `-i ../../include`
 
 ***
 
