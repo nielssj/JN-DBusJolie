@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import jolie.Jolie;
+import org.apache.commons.lang3.ArrayUtils;
 import static org.junit.Assert.assertEquals;
 
 /*
@@ -22,10 +23,10 @@ public class JolieTestProgram extends Thread
     private String outputfile, output;
     private String[] args;
 
-    public JolieTestProgram(String[] args, String outputfile)
+    public JolieTestProgram(String sourcefile, String[] args, String outputfile)
     {
-        this.args = args;
         this.outputfile = outputfile;
+        this.args = ArrayUtils.addAll(args, new String[] { sourcefile });
     }
 
     @Override

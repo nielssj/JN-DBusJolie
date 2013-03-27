@@ -22,7 +22,9 @@ public class GeneralJolieTests {
         defaultArgs = new String[] {
             "-i", "../../jolie-src/include", 
             "-l", "../../jolie-src/javaServices/coreJavaServices/dist/coreJavaServices.jar",
-            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar" 
+            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar",
+            "-l", "../../jolie-src/lib/xsom/dist",
+            "-l", "../../jolie-src/lib/jolie-xml/dist" 
         };
     }
     
@@ -40,15 +42,14 @@ public class GeneralJolieTests {
     @Test
     public void file() throws Exception {
         // Arrange
-        String[] args = ArrayUtils.addAll(defaultArgs, new String[] { 
-            "jolie-programs/HelloFileSystem.ol",
-            "-l", "../../jolie-src/lib/xsom/dist",
-            "-l", "../../jolie-src/lib/jolie-xml/dist"
-        });
+        JolieTestProgram p = new JolieTestProgram(
+                "jolie-programs/HelloFileSystem.ol", defaultArgs, "MyFile.txt");
         
-        JolieTestProgram p = new JolieTestProgram(args, "MyFile.txt");
+        // Act
         p.start();
         p.join();
+        
+        // Assert
         assertEquals("Hello file system!", p.getOutput());
     }
     
