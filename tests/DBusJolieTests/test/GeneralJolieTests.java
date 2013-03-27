@@ -3,8 +3,7 @@
  * and open the template in the editor.
  */
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -17,9 +16,6 @@ import org.apache.commons.lang3.ArrayUtils;
  */
 public class GeneralJolieTests {
     private static String[] defaultArgs;
-    private static PrintStream stdOut = System.out;
-    private ByteArrayOutputStream myOutBAOS;
-    private PrintStream myOut;
     
     @BeforeClass
     public static void setUpClass() { 
@@ -33,38 +29,27 @@ public class GeneralJolieTests {
     @Before
     public void setUp() {
         System.setSecurityManager(new NoExitSecurityManager());
-        myOutBAOS = new ByteArrayOutputStream();
-        myOut = new PrintStream(myOutBAOS);
     }
     
     @After
     public void tearDown() {
         System.setSecurityManager(null);
-        System.setOut(stdOut);
-        myOut.close();
     }
     
-    // The simple HelloWorld program (requires no extensions)
+    // HelloFileSystem, file system usage in Jolie
     @Test
-    public void hello() {
+    public void file() throws Exception {
         // Arrange
         String[] args = ArrayUtils.addAll(defaultArgs, new String[] { 
-            "jolie-programs/HelloWorld.ol"
+            "jolie-programs/HelloFileSystem.ol",
+            "-l", "../../jolie-src/lib/xsom/dist",
+            "-l", "../../jolie-src/lib/jolie-xml/dist"
         });
         
-        // Act
-        try 
-        {
-            System.setOut(myOut);
-            Jolie.main(args);
-        } 
-        // Assert
-        catch (NoExitSecurityManager.ExitException e) 
-        {
-            System.setOut(stdOut);
-            assertEquals("Exit status", 0, e.status);
-            assertEquals("Hello, world!\n", myOutBAOS.toString());
-        }
+        JolieTestProgram p = new JolieTestProgram(args, "MyFile.txt");
+        p.start();
+        p.join();
+        assertEquals("Hello file system!", p.getOutput());
     }
     
     @Test
