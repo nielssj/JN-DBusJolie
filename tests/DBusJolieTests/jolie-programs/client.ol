@@ -2,7 +2,7 @@ include "console.iol"
 include "TwiceInterface.iol"
 
 outputPort TwiceService {
-	Location: "socket://localhost:8000"
+	Location: "localsocket:me/soeholm/csexample"
 	Protocol: sodep
 	Interfaces: TwiceInterface
 }

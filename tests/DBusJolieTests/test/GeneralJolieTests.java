@@ -10,8 +10,6 @@ import static org.junit.Assert.*;
 
 import jolie.*;
 import org.apache.commons.lang3.ArrayUtils;
-import org.junit.contrib.java.lang.system.Assertion;
-import org.junit.contrib.java.lang.system.ExpectedSystemExit;
 
 /**
  *
@@ -22,9 +20,6 @@ public class GeneralJolieTests {
     private static PrintStream stdOut = System.out;
     private ByteArrayOutputStream myOutBAOS;
     private PrintStream myOut;
-    
-    @Rule
-    public final ExpectedSystemExit exit = ExpectedSystemExit.none();
     
     @BeforeClass
     public static void setUpClass() { 
@@ -37,12 +32,15 @@ public class GeneralJolieTests {
     
     @Before
     public void setUp() {
+        System.setSecurityManager(new NoExitSecurityManager());
         myOutBAOS = new ByteArrayOutputStream();
         myOut = new PrintStream(myOutBAOS);
     }
     
     @After
     public void tearDown() {
+        System.setSecurityManager(null);
+        System.setOut(stdOut);
         myOut.close();
     }
     
@@ -50,10 +48,36 @@ public class GeneralJolieTests {
     @Test
     public void hello() {
         // Arrange
-        String[] testArgs = new String[] { 
+        String[] args = ArrayUtils.addAll(defaultArgs, new String[] { 
             "jolie-programs/HelloWorld.ol"
+        });
+        
+        // Act
+        try 
+        {
+            System.setOut(myOut);
+            Jolie.main(args);
+        } 
+        // Assert
+        catch (NoExitSecurityManager.ExitException e) 
+        {
+            System.setOut(stdOut);
+            assertEquals("Exit status", 0, e.status);
+            assertEquals("Hello, world!\n", myOutBAOS.toString());
+        }
+    }
+    
+    @Test
+    public void clientServer() {
+        /*// Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/sodep/dist/*",
+            "-l", "../../jolie-src/extensions/localsocket/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew"
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        String[] clientArgs = ArrayUtils.addAll(args, new String[] { "jolie-programs/client.ol" });
+        String[] serverArgs = ArrayUtils.addAll(args, new String[] { "jolie-programs/server.ol" });
         
         exit.expectSystemExitWithStatus(0);
         exit.checkAssertionAfterwards(new Assertion() {
@@ -67,7 +91,7 @@ public class GeneralJolieTests {
         
         // Act
         System.setOut(myOut);
-        Jolie.main(args);
+        Jolie.main(serverArgs);*/
     }
     
     // The jolie program to call NextPage of Okular D-Bus API
@@ -81,19 +105,5 @@ public class GeneralJolieTests {
             "-l", "../../jolie-src/lib/libmatthew" // unix.jar (TODO: D-Bus extension should reference this on its own?)
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        
-        exit.expectSystemExitWithStatus(0);
-        exit.checkAssertionAfterwards(new Assertion() {
-            // Assert
-            @Override
-            public void checkAssertion() {
-                System.setOut(stdOut);
-                assertTrue(true);
-            }
-        });
-        
-        // Act
-        System.setOut(myOut);
-        Jolie.main(args);
     }
 }
