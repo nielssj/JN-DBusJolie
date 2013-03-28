@@ -18,12 +18,12 @@ import static org.junit.Assert.assertEquals;
  *
  * @author niels
  */
-public class JolieTestProgram extends Thread
+public class JolieThread extends Thread
 {
     private String outputfile, output;
     private String[] args;
 
-    public JolieTestProgram(String sourcefile, String[] args, String outputfile)
+    public JolieThread(String sourcefile, String[] args, String outputfile)
     {
         this.outputfile = outputfile;
         this.args = ArrayUtils.addAll(args, new String[] { sourcefile });

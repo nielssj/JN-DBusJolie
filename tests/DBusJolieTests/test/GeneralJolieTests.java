@@ -41,7 +41,7 @@ public class GeneralJolieTests {
     @Test
     public void hello() throws Exception {
         // Arrange
-        JolieTestProgram2 p = new JolieTestProgram2(jpf+"/HelloWorld.ol", defaultArgs);
+        JolieSubProcess p = new JolieSubProcess(jpf+"/HelloWorld.ol", defaultArgs);
         
         // Act
         p.start();
@@ -55,7 +55,7 @@ public class GeneralJolieTests {
     @Test
     public void file() throws Exception {
         // Arrange
-        JolieTestProgram p = new JolieTestProgram(
+        JolieThread p = new JolieThread(
                 jpf+"/HelloFileSystem.ol", defaultArgs, "MyFile.txt");
         
         // Act
@@ -75,8 +75,8 @@ public class GeneralJolieTests {
             "-l", "../../jolie-src/lib/libmatthew"
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        JolieTestProgram2 server = new JolieTestProgram2(jpf+"/server.ol", args);
-        JolieTestProgram2 client = new JolieTestProgram2(jpf+"/client.ol", args);
+        JolieSubProcess server = new JolieSubProcess(jpf+"/server.ol", args);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/client.ol", args);
         
         // Act 
         server.start();

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.ArrayUtils;
  *
  * @author niels
  */
-public class JolieTestProgram2
+public class JolieSubProcess
 {
     private static String[] env = new String[] { 
         "/usr/bin/java", 
@@ -19,7 +19,7 @@ public class JolieTestProgram2
     private String[] args;
     private Process process;
 
-    public JolieTestProgram2(String sourcefile, String[] args)
+    public JolieSubProcess(String sourcefile, String[] args)
     {
         args = ArrayUtils.add(args, sourcefile);
         this.args = ArrayUtils.addAll(env, args);
