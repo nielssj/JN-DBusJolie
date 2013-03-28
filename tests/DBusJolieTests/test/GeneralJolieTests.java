@@ -3,11 +3,8 @@
  * and open the template in the editor.
  */
 
-import java.io.*;
 import org.junit.*;
 import static org.junit.Assert.*;
-
-import jolie.*;
 import org.apache.commons.lang3.ArrayUtils;
 
 /**
@@ -16,9 +13,11 @@ import org.apache.commons.lang3.ArrayUtils;
  */
 public class GeneralJolieTests {
     private static String[] defaultArgs;
+    private static String jpf;
     
     @BeforeClass
     public static void setUpClass() { 
+        jpf = "jolie-programs";
         defaultArgs = new String[] {
             "-i", "../../jolie-src/include", 
             "-l", "../../jolie-src/javaServices/coreJavaServices/dist/coreJavaServices.jar",
@@ -38,12 +37,26 @@ public class GeneralJolieTests {
         System.setSecurityManager(null);
     }
     
+    // Simple Hello World, uses seperate process
+    @Test
+    public void hello() throws Exception {
+        // Arrange
+        JolieTestProgram2 p = new JolieTestProgram2(jpf+"/HelloWorld.ol", defaultArgs);
+        
+        // Act
+        p.start();
+        p.join();
+        
+        // Assert
+        assertEquals("Hello, world!", p.getOutput());
+    }
+    
     // HelloFileSystem, file system usage in Jolie
     @Test
     public void file() throws Exception {
         // Arrange
         JolieTestProgram p = new JolieTestProgram(
-                "jolie-programs/HelloFileSystem.ol", defaultArgs, "MyFile.txt");
+                jpf+"/HelloFileSystem.ol", defaultArgs, "MyFile.txt");
         
         // Act
         p.start();
@@ -54,30 +67,25 @@ public class GeneralJolieTests {
     }
     
     @Test
-    public void clientServer() {
-        /*// Arrange
+    public void clientServer() throws Exception {
+        // Arrange
         String[] testArgs = new String[] { 
             "-l", "../../jolie-src/extensions/sodep/dist/*",
             "-l", "../../jolie-src/extensions/localsocket/dist/*",
             "-l", "../../jolie-src/lib/libmatthew"
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        String[] clientArgs = ArrayUtils.addAll(args, new String[] { "jolie-programs/client.ol" });
-        String[] serverArgs = ArrayUtils.addAll(args, new String[] { "jolie-programs/server.ol" });
+        JolieTestProgram2 server = new JolieTestProgram2(jpf+"/server.ol", args);
+        JolieTestProgram2 client = new JolieTestProgram2(jpf+"/client.ol", args);
         
-        exit.expectSystemExitWithStatus(0);
-        exit.checkAssertionAfterwards(new Assertion() {
-            // Assert
-            @Override
-            public void checkAssertion() {
-                System.setOut(stdOut);
-                assertEquals("Hello, world!\n", myOutBAOS.toString());
-            }
-        });
+        // Act 
+        server.start();
+        client.start();
+        client.join();
+        server.join();
         
-        // Act
-        System.setOut(myOut);
-        Jolie.main(serverArgs);*/
+        // Assert
+        assertEquals("10", client.getOutput());
     }
     
     // The jolie program to call NextPage of Okular D-Bus API

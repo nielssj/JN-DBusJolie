@@ -2,7 +2,7 @@ include "console.iol"
 include "TwiceInterface.iol"
 
 outputPort TwiceService {
-	Location: "localsocket:me/soeholm/csexample"
+	Location: "localsocket:/tmp/mysocket.txt"
 	Protocol: sodep
 	Interfaces: TwiceInterface
 }
@@ -10,5 +10,5 @@ outputPort TwiceService {
 main
 {
 	twice@TwiceService( 5 )( response );
-	println@Console( response )()
+	print@Console(response)()
 }

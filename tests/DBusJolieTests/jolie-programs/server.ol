@@ -1,7 +1,7 @@
 include "TwiceInterface.iol"
 
 inputPort TwiceService {
-	Location: "localsocket:/home/niels/Jolie/mysocket2.txt"
+	Location: "localsocket:/tmp/mysocket.txt"
 	Protocol: sodep
 	Interfaces: TwiceInterface
 }
