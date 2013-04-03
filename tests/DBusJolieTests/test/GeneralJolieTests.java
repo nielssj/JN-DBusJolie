@@ -3,15 +3,9 @@
  * and open the template in the editor.
  */
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import org.junit.*;
 import static org.junit.Assert.*;
-
-import jolie.*;
 import org.apache.commons.lang3.ArrayUtils;
-import org.junit.contrib.java.lang.system.Assertion;
-import org.junit.contrib.java.lang.system.ExpectedSystemExit;
 
 /**
  *
@@ -19,55 +13,99 @@ import org.junit.contrib.java.lang.system.ExpectedSystemExit;
  */
 public class GeneralJolieTests {
     private static String[] defaultArgs;
-    private static PrintStream stdOut = System.out;
-    private ByteArrayOutputStream myOutBAOS;
-    private PrintStream myOut;
-    
-    @Rule
-    public final ExpectedSystemExit exit = ExpectedSystemExit.none();
+    private static String jpf;
     
     @BeforeClass
     public static void setUpClass() { 
+        jpf = "jolie-programs";
         defaultArgs = new String[] {
             "-i", "../../jolie-src/include", 
             "-l", "../../jolie-src/javaServices/coreJavaServices/dist/coreJavaServices.jar",
-            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar" 
+            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar",
+            "-l", "../../jolie-src/lib/xsom/dist",
+            "-l", "../../jolie-src/lib/jolie-xml/dist" 
         };
     }
     
     @Before
     public void setUp() {
-        myOutBAOS = new ByteArrayOutputStream();
-        myOut = new PrintStream(myOutBAOS);
+        System.setSecurityManager(new NoExitSecurityManager());
     }
     
     @After
     public void tearDown() {
-        myOut.close();
+        System.setSecurityManager(null);
     }
     
-    // The simple HelloWorld program (requires no extensions)
+    // Simple Hello World, uses seperate process
     @Test
-    public void hello() {
+    public void hello() throws Exception {
         // Arrange
-        String[] testArgs = new String[] { 
-            "jolie-programs/HelloWorld.ol"
-        };
-        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        
-        exit.expectSystemExitWithStatus(0);
-        exit.checkAssertionAfterwards(new Assertion() {
-            // Assert
-            @Override
-            public void checkAssertion() {
-                System.setOut(stdOut);
-                assertEquals("Hello, world!\n", myOutBAOS.toString());
-            }
-        });
+        JolieSubProcess p = new JolieSubProcess(jpf+"/HelloWorld.ol", defaultArgs);
         
         // Act
-        System.setOut(myOut);
-        Jolie.main(args);
+        p.start();
+        p.join();
+        
+        // Assert
+        assertEquals("Hello, world!", p.getOutput());
+    }
+    
+    // HelloFileSystem, file system usage in Jolie
+    @Test
+    public void file() throws Exception {
+        // Arrange
+        JolieThread p = new JolieThread(
+                jpf+"/HelloFileSystem.ol", defaultArgs, "MyFile.txt");
+        
+        // Act
+        p.start();
+        p.join();
+        
+        // Assert
+        assertEquals("Hello file system!", p.getOutput());
+    }
+    
+    @Test
+    public void clientServer() throws Exception {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/sodep/dist/*",
+            "-l", "../../jolie-src/extensions/localsocket/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieSubProcess server = new JolieSubProcess(jpf+"/server.ol", args);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/client.ol", args);
+        
+        // Act 
+        server.start();
+        client.start();
+        client.join();
+        server.join();
+        
+        // Assert
+        assertEquals("10", client.getOutput());
+    }
+    
+    @Test
+    public void simpleServer() throws Exception {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/extensions/dbus/lib"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieThread server = new JolieThread(jpf+"/dbusserver.ol", args, "");
+        
+        // Act 
+        server.start();
+        server.join();
+        
+        // Assert
+        assertTrue(true);
     }
     
     // The jolie program to call NextPage of Okular D-Bus API
@@ -81,19 +119,5 @@ public class GeneralJolieTests {
             "-l", "../../jolie-src/lib/libmatthew" // unix.jar (TODO: D-Bus extension should reference this on its own?)
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        
-        exit.expectSystemExitWithStatus(0);
-        exit.checkAssertionAfterwards(new Assertion() {
-            // Assert
-            @Override
-            public void checkAssertion() {
-                System.setOut(stdOut);
-                assertTrue(true);
-            }
-        });
-        
-        // Act
-        System.setOut(myOut);
-        Jolie.main(args);
     }
 }

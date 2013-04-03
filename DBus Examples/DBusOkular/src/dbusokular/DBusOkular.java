@@ -1,6 +1,7 @@
 package dbusokular;
 
 import java.text.ParseException;
+import javax.xml.soap.MessageFactory;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
 import org.freedesktop.dbus.Message;
@@ -8,6 +9,7 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.MethodReturn;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.UInt32;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  *
@@ -19,8 +21,8 @@ public class DBusOkular {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception  {
-        //testAndExpose();
-        talkToOkular();
+        testAndExpose();
+        //talkToOkular();
     }
     
     public static void talkToOkular() throws Exception {
@@ -132,15 +134,17 @@ public class DBusOkular {
                 MethodCall call = (MethodCall)m;
                 System.out.println("I got something!: "+call);
                 
-                Message ret;
+                Message ret = null;
                 if ("Introspect".equals(call.getName())) {
-                    String data = "<node name=\"/\"><interface name=\"org.testname\">" +
+                    /*String data = "<node name=\"/\"><interface name=\"org.testname\">" +
 "            <method name=\"Hello\">" +
 "              <arg name=\"name\" type=\"s\" direction=\"in\"/>" +
 "              <arg name=\"helloname\" type=\"s\" direction=\"out\"/></method></interface></node>";
                     
                     
-                    ret = new MethodReturn(call, "s", data);
+                    ret = new MethodReturn(call, "s", data);*/
+                    
+                    ret = new org.freedesktop.dbus.Error(call, new NoSuchMethodException("This service is not introspectable"));
                 } else {
                     ret = new MethodReturn(call, "s", "Hello "+call.getParameters()[0]);
                 }
