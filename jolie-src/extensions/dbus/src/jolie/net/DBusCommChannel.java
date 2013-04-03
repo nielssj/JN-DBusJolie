@@ -220,13 +220,36 @@ public class DBusCommChannel extends CommChannel
     this.transport.mout.writeMessage(m);
 	}
 	
-	protected CommMessage recvImpl()
-		throws IOException
-	{
-    System.out.println("recvimpl");
-                // TODO: Implement?
-		return null;
-	}
+    protected CommMessage recvImpl() throws IOException
+    {
+        Value val = null;
+        FaultException error = null;
+        
+        try
+        {
+            Message m = transport.min.readMessage();
+                
+            if(m != null && m instanceof MethodCall)
+            {
+                MethodCall call = (MethodCall)m;
+                val = DBusToJolieValue(call.getParameters(), call.getSig());
+            }
+            else
+            {
+                throw new Exception("Unsupported message type");
+            }
+        }
+        catch (DBusException ex)
+        {
+            throw new IOException(ex);
+        }
+        catch (Exception ex)
+        {
+            error = new FaultException("Failed to parse input paramters", ex);
+        }
+        
+        return new CommMessage(0, connectionName, objectPath, val, error);
+    }
 	
 	protected void closeImpl()
 		throws IOException
