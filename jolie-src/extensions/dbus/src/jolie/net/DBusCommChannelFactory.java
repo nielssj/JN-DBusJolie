@@ -21,16 +21,12 @@
 package jolie.net;
 
 import jolie.net.ports.OutputPort;
-import cx.ath.matthew.unix.UnixSocket;
-import cx.ath.matthew.unix.UnixSocketAddress;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.concurrent.ExecutionException;
 import jolie.net.ext.CommChannelFactory;
 import jolie.runtime.AndJarDeps;
 
-@AndJarDeps({"unix.jar"})
+@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusCommChannelFactory extends CommChannelFactory
 {
 	public DBusCommChannelFactory( CommCore commCore )
@@ -42,14 +38,11 @@ public class DBusCommChannelFactory extends CommChannelFactory
 		throws IOException
 	{
 		CommChannel ret = null;
-		
-                try {
-                    ret = new DBusCommChannel(location, port.getProtocol());
-                }
-                catch (URISyntaxException ex)
-                {
-                    System.out.println("Failed to create D-Bus communication channel");
-                }
+		try {
+      ret = new DBusCommChannel(location, port);
+    } catch (Exception e) {
+      
+    } 
                                 
 		return ret;
 	}

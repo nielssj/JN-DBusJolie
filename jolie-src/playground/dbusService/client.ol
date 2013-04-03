@@ -2,13 +2,12 @@ include "console.iol"
 include "TwiceInterface.iol"
 
 outputPort TwiceService {
-	Location: "socket://localhost:8000"
-	Protocol: sodep
+	Location: "dbus:/me/soeholm/coolbus"
 	Interfaces: TwiceInterface
 }
 
 main
 {
 	twice@TwiceService( 5 )( response );
-	println@Console( response )()
+	println@Console( "Joe" )()
 }

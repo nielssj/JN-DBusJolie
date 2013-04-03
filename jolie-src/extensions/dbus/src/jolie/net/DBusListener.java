@@ -38,7 +38,7 @@ public class DBusListener extends CommListener
 		throws IOException
 	{
 		super( interpreter, protocolFactory, inputPort );
-                
+    System.out.println("listener");
                 // TODO: Implement
 	}
 	
