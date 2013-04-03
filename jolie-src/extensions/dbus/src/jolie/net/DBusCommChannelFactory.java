@@ -21,36 +21,85 @@
 package jolie.net;
 
 import jolie.net.ports.OutputPort;
-import cx.ath.matthew.unix.UnixSocket;
-import cx.ath.matthew.unix.UnixSocketAddress;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.concurrent.ExecutionException;
+import java.text.ParseException;
 import jolie.net.ext.CommChannelFactory;
+import jolie.net.ports.InputPort;
 import jolie.runtime.AndJarDeps;
+import org.freedesktop.dbus.BusAddress;
+import org.freedesktop.dbus.Message;
+import org.freedesktop.dbus.MethodCall;
+import org.freedesktop.dbus.Transport;
+import org.freedesktop.dbus.exceptions.DBusException;
 
-@AndJarDeps({"unix.jar"})
+@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusCommChannelFactory extends CommChannelFactory
 {
 	public DBusCommChannelFactory( CommCore commCore )
 	{
 		super( commCore );
 	}
+  
+  public CommChannel createChannel( URI location, InputPort port ) throws DBusException, IOException {
+    String[] parts = DBusLocationParser.parse(location.getPath());
+    String connectionName = parts[0];
+    String objectPath = parts[1];
+    
+    DBusCommChannel channel = this.create(location, connectionName, objectPath);
+    
+    boolean nameObtained = channel.obtainName(connectionName);   
+    
+    System.out.println("Name obtained: "+nameObtained);
+    
+     return channel;
+  }
 
 	public CommChannel createChannel( URI location, OutputPort port )
 		throws IOException
 	{
-		CommChannel ret = null;
-		
-                try {
-                    ret = new DBusCommChannel(location, port.getProtocol());
-                }
-                catch (URISyntaxException ex)
-                {
-                    System.out.println("Failed to create D-Bus communication channel");
-                }
-                                
-		return ret;
+    String[] parts = DBusLocationParser.parse(location.getPath());
+    String connectionName = parts[0];
+    String objectPath = parts[1];
+    
+    DBusCommChannel channel = this.create(location, connectionName, objectPath);
+    
+     return channel;
 	}
+  
+  private DBusCommChannel create ( URI location, String connectionName, String objectPath ) {
+    DBusCommChannel ret = null;
+    Transport transport;
+    try {
+        BusAddress address = new BusAddress(System.getenv("DBUS_SESSION_BUS_ADDRESS")); // TODO: Move to location (SESSION/SYSTEM)
+        transport = new Transport(address);
+
+        // Obtain DBus ID
+        Message m = new MethodCall("org.freedesktop.DBus", "/",
+        "org.freedesktop.DBus", "Hello", (byte) 0, null);
+        transport.mout.writeMessage(m);
+        m = transport.min.readMessage();
+        System.out.println("Response to Hello is: "+m);
+    }
+    catch (ParseException ex)
+    {
+        throw new RuntimeException("Failed to parse BusAddress", ex);
+    }
+    catch (DBusException ex)
+    {
+        throw new RuntimeException("Failed to register service in dbus", ex);
+    }
+    catch (IOException ex)
+    {
+      throw new RuntimeException("Failed to create transport in dbus", ex);
+    }
+    		
+		try {
+      ret = new DBusCommChannel(transport, connectionName, objectPath, location);
+    } catch (Exception ex) {
+      throw new RuntimeException("Failed to create DBusCommChannel", ex);
+    } 
+    
+    return ret;
+  }
 }

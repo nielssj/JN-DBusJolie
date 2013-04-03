@@ -1,13 +1,25 @@
 include "okular.iol"
+include "console.iol"
 
 outputPort Okular {
-	Location: "dbus://localhost:8000"
-	//Location: "dbus:SESSION:org.kde.okular-7526/okular"
-	Protocol: sodep
+	Location: "dbus:/org.kde.okular-8159:/okular"
 	Interfaces: Okular
+}
+
+outputPort OkularShell {
+	Location: "dbus:/org.kde.okular-8159:/okular/okular__Shell"
+	Interfaces: Okular__shell
 }
 
 main
 {
-	nextPage@Okular()( response )
+	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
+	goToPage@Okular( 10 );
+	currentPage@Okular( ) ( response );
+	println@Console( "currentPage is " + response )();
+	currentDocument@Okular( ) ( response2 );
+	println@Console( "currentDocument is " + response2 )();
+
+	close@OkularShell( ) ( response3 );
+	println@Console( "response to close is " + response3 )()
 }
