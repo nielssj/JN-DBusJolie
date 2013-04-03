@@ -2,5 +2,6 @@ dist/
 build/
 .svn
 private.properties
+private.xml
 *.*~
 /tests/DBusJolieTests/nbproject/private/
