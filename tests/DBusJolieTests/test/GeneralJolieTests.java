@@ -88,6 +88,26 @@ public class GeneralJolieTests {
         assertEquals("10", client.getOutput());
     }
     
+    @Test
+    public void simpleServer() throws Exception {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/extensions/dbus/lib"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieThread server = new JolieThread(jpf+"/dbusserver.ol", args, "");
+        
+        // Act 
+        server.start();
+        server.join();
+        
+        // Assert
+        assertTrue(true);
+    }
+    
     // The jolie program to call NextPage of Okular D-Bus API
     @Test
     public void okularNextPage() {
