@@ -45,43 +45,49 @@ import org.freedesktop.dbus.exceptions.DBusException;
 
 public class DBusCommChannel extends CommChannel
 {
-   Transport transport;
+   private Transport transport;
    String uniqueName;
    // Values: Dbus message serial
    // Key: Jolie message id
    HashMap<Long, Long> messages;
    
    OutputPort port;   
-   private String outputConnectionName;
-   private String outputObjectPath;
+   private String connectionName;
+   private String objectPath;
   
-	public DBusCommChannel( URI location, OutputPort port)
+	public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location)
 		throws IOException, ParseException, DBusException
 	{
 		super( );
     
-    String[] parts = DBusLocationParser.parse(location.getPath());
-    this.outputConnectionName = parts[0];
-    this.outputObjectPath = parts[1];
+    this.transport = transport;
     
-    System.out.printf("connectionName %s \n", this.outputConnectionName);
-    System.out.printf("objectpath %s \n", this.outputObjectPath);
+    this.connectionName = connectionName;
+    this.objectPath = objectPath;
     
-    this.port = port;
+    
+    System.out.printf("connectionName %s \n", this.connectionName);
+    System.out.printf("objectpath %s \n", this.objectPath);
+    
     messages = new HashMap<Long, Long>();
-    
-    // Initialize D-Bus connection
-    BusAddress address = new BusAddress(
-        System.getenv("DBUS_SESSION_BUS_ADDRESS"));
-    this.transport = new Transport(address);
-
-    Message m = new MethodCall("org.freedesktop.DBus", "/",
-    "org.freedesktop.DBus", "Hello", (byte) 0, null);
-    this.transport.mout.writeMessage(m);
-    MethodReturn response = (MethodReturn) this.transport.min.readMessage();
-    this.uniqueName = (String) response.getParameters()[0];
-    System.out.println("My unique name is: "+this.uniqueName);
 	}
+  
+  public boolean obtainName(String name) throws DBusException, IOException {
+      // Reserve a name instead of just an ID
+    Message m = new MethodCall("org.freedesktop.DBus", "/",
+      "org.freedesktop.DBus", "RequestName", (byte) 0,
+      "su", name, 0);
+    
+    this.transport.mout.writeMessage(m);
+    m = this.transport.min.readMessage();
+    
+    UInt32 ret =  (UInt32) m.getParameters()[0];
+    
+    if (ret.intValue() == 1) {
+      return true;
+    }
+    return false;
+  }
   
   private String nativeValueToDBusString(Value value) {
     if (value.isBool()) {
@@ -196,8 +202,8 @@ public class DBusCommChannel extends CommChannel
     MethodCall m;
     try {
        m = new MethodCall(
-            this.outputConnectionName,
-            this.outputObjectPath,
+            this.connectionName,
+            this.objectPath,
             null,
             message.operationName(), 
             (byte) 0, 
