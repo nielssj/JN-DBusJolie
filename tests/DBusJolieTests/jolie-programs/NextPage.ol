@@ -13,6 +13,17 @@ outputPort OkularShell {
 
 main
 {
+	/*
+	arg.field1[0] = "nok sygt";
+	//arg.field1[1] = 12;
+	arg.field2 = "sygt nok";
+	arg.field3.values[0] = 5;
+	arg.field3.values[1] = 6;
+
+
+	testmethod@Okular ( arg )
+	*/
+	
 	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
 	goToPage@Okular( 10 );
 	currentPage@Okular( ) ( response );
