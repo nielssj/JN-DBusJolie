@@ -41,12 +41,12 @@ public class DBusCommChannelFactory extends CommChannelFactory
 		super( commCore );
 	}
   
-  public CommChannel createChannel( URI location, InputPort port ) throws DBusException, IOException {
+  public static DBusCommChannel createChannel( URI location, InputPort port ) throws DBusException, IOException {
     String[] parts = DBusLocationParser.parse(location.getPath());
     String connectionName = parts[0];
     String objectPath = parts[1];
     
-    DBusCommChannel channel = this.create(location, connectionName, objectPath);
+    DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath);
     
     boolean nameObtained = channel.obtainName(connectionName);   
     
@@ -55,19 +55,19 @@ public class DBusCommChannelFactory extends CommChannelFactory
      return channel;
   }
 
-	public CommChannel createChannel( URI location, OutputPort port )
+    public CommChannel createChannel( URI location, OutputPort port )
 		throws IOException
 	{
     String[] parts = DBusLocationParser.parse(location.getPath());
     String connectionName = parts[0];
     String objectPath = parts[1];
     
-    DBusCommChannel channel = this.create(location, connectionName, objectPath);
+    DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath);
     
      return channel;
 	}
   
-  private DBusCommChannel create ( URI location, String connectionName, String objectPath ) {
+  private static DBusCommChannel create ( URI location, String connectionName, String objectPath ) {
     DBusCommChannel ret = null;
     Transport transport;
     try {

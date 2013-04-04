@@ -1,8 +1,8 @@
 include "TwiceInterface.iol"
 
 inputPort TwiceService {
-	Location: "dbus:org.testname"
-	Protocol: sodep
+	Location: "dbus:org.testname:/object"
+	//Protocol: sodep
 	Interfaces: TwiceInterface
 }
 

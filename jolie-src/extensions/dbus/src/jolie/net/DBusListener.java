@@ -1,99 +1,66 @@
 package jolie.net;
 
-
 import java.io.IOException;
-import java.text.ParseException;
-
 import jolie.Interpreter;
 import jolie.net.ports.InputPort;
-import org.freedesktop.dbus.*;
-import org.freedesktop.dbus.exceptions.*;
+import org.freedesktop.dbus.exceptions.DBusException;
 
 public class DBusListener extends CommListener implements Runnable
 {
-    private String name;
-    private Transport conn;
-    private boolean stopped = false;
+    private InputPort port;
+    private DBusCommChannel channel;
 
-    public DBusListener(Interpreter interpreter, InputPort inputPort) throws IOException
+    public DBusListener(Interpreter interpreter, InputPort inputPort)
     {
         super(interpreter, inputPort);
-        name = inputPort.location().getSchemeSpecificPart(); // e.g. org.testname
-
-        try
-        {
-            BusAddress address = new BusAddress(System.getenv("DBUS_SESSION_BUS_ADDRESS")); // TODO: Move to location (SESSION/SYSTEM)
-            conn = new Transport(address);
-
-            // Obtain DBus ID
-            Message m = new MethodCall("org.freedesktop.DBus", "/",
-            "org.freedesktop.DBus", "Hello", (byte) 0, null);
-            conn.mout.writeMessage(m);
-            m = conn.min.readMessage();
-            System.out.println("Response to Hello is: "+m);
-
-            // Reserve a name instead of just an ID
-            m = new MethodCall("org.freedesktop.DBus", "/",
-            "org.freedesktop.DBus", "RequestName", (byte) 0,
-            "su", name, 0);
-            conn.mout.writeMessage(m);
-            m = conn.min.readMessage();
-            System.out.println("Response to Requestname is: "+m);
-        }
-        catch (ParseException ex)
-        {
-            throw new RuntimeException("Failed to parse BusAddress", ex);
-        }
-        catch (DBusException ex)
-        {
-            throw new RuntimeException("Failed to register service in dbus", ex);
-        }
+        this.port = inputPort;
     }
 
     @Override
     public void shutdown()
     {
-        stopped = true;
+        try
+        {
+            channel.closeImpl();
+        }
+        catch (IOException ex)
+        {
+            throw new RuntimeException("Failed to close D-Bus comm channel", ex);
+        }
     }
 
     @Override
     public void run()
     {
-        stopped = false;
+        // Create comm channel
+        try
+        {
+            channel = DBusCommChannelFactory.createChannel(port.location(), port);
+        }
+        catch (Exception ex)
+        {
+            throw new RuntimeException("Failed to create comm channel for InputPort", ex);
+        }
         
-        // Listen for methods calls till shutdown is called
-        while (!stopped) { 
-            try
-            {
-                Message m = conn.min.readMessage();
-                
-                if(m != null && m instanceof MethodCall)
+        // Start listening for method calls till shutdown is called
+        try
+        {
+            while (true) 
+            { 
+                if(channel.checkInput())
                 {
-                    MethodCall call = (MethodCall)m;
-                    Message ret = null;
-                    
-                    if ("Introspect".equals(call.getName())) {
-                        String data = "<node name=\"/\"><interface name=\"org.testname\">" +
-                        "            <method name=\"Hello\">" +
-                        "              <arg name=\"name\" type=\"s\" direction=\"in\"/>" +
-                        "              <arg name=\"helloname\" type=\"s\" direction=\"out\"/></method></interface></node>";
-
-                        ret = new MethodReturn(call, "s", data);
-
-                        //ret = new org.freedesktop.dbus.Error(call, new NoSuchMethodException("This service is not introspectable"));
-                    } else {
-                        ret = new MethodReturn(call, "s", "Hello "+call.getParameters()[0]);
-                    }
-                    
-                    conn.mout.writeMessage(ret);
+                    System.out.println("Scheduling message in CommCore");
+                    interpreter().commCore().scheduleReceive(channel, port);
                 }
-                
-                Thread.sleep(100);
             }
-            catch( Exception ex )
-            {
-                throw new RuntimeException("Unexpected failure upon message receive", ex);
-            }
+        }
+        catch (DBusException ex )
+        {
+            // Transport was closed, do nothing
+        }
+        catch (Exception ex)
+        {
+            throw new RuntimeException("Unexpected failure during listening", ex);
         }
     }        
 }
