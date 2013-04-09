@@ -40,26 +40,25 @@ public class DBusCommChannel extends CommChannel {
     OutputPort port;
     private String connectionName;
     private String objectPath;
-    
-    // Messages being executed indexed by Jolie message id
-    // Values: Dbus message serial
-    // Key: Jolie message id
-    ConcurrentHashMap<Long, Message> messages;  
+    private boolean isInputPort;
     
     // Detected messages waiting to be scheduled for execution by CommCore
     ConcurrentLinkedQueue<Message> inputQueue;  
+    // Messages being executed or waiting to be, indexed by D-Bus serial
+    ConcurrentHashMap<Long, Message> messages;
     
     
     // Constructor: Save details and instantiate collections
-    public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location)
+    public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort)
             throws IOException, ParseException, DBusException {
         super();
 
         this.transport = transport;
         this.connectionName = connectionName;
         this.objectPath = objectPath;
-        this.messages = new ConcurrentHashMap<Long, Message>();
         this.inputQueue = new ConcurrentLinkedQueue<Message>();
+        this.messages = new ConcurrentHashMap<Long, Message>();
+        this.isInputPort = isInputPort;
 
         System.out.printf("CommChannel init - ConnectionName: %s \n", this.connectionName);
         System.out.printf("CommChannel init - Objectpath: %s \n", this.objectPath);
@@ -116,19 +115,22 @@ public class DBusCommChannel extends CommChannel {
         
         Message m;
         try {
-            if(messages.containsKey(id))
+            if(isInputPort)
             {
                 // Response to method call (InputPort)
-                MethodCall imsg = (MethodCall)messages.get(id);
                 if(!message.isFault())
                 {
-                    m = new MethodReturn(imsg, typeString, values);
+                    m = new MethodReturn(
+                        (MethodCall)messages.remove(message.id()), 
+                        typeString, 
+                        values);
                 }
                 else
                 {
-                    m = new Error(imsg, message.fault());
+                    m = new Error(
+                        messages.remove(message.id()), 
+                        message.fault());
                 }
-               messages.remove(id);
             }
             else
             {
@@ -141,8 +143,6 @@ public class DBusCommChannel extends CommChannel {
                     (byte) 0,
                     typeString,
                     values);
-                
-                this.messages.put(message.id(), m);
             }
         } catch (DBusException e) {
             System.out.println("DBus Exception in sendimpl");
@@ -168,9 +168,9 @@ public class DBusCommChannel extends CommChannel {
                     MethodCall call = (MethodCall) msg;
                     Value val = DBusMarshalling.ToJolieValue(call.getParameters(), call.getSig());
                     
-                    CommMessage cmsg = CommMessage.createRequest(msg.getName(), "/", val);
-                    this.messages.put(cmsg.id(), msg);
-                    
+                    CommMessage cmsg = new CommMessage(msg.getSerial(), msg.getName(), "/", val, null);
+                    this.messages.put(msg.getSerial(), msg);
+                                        
                     System.out.printf("recvimpl - Marshalled returning CommMessage to CommCore: %s\n", cmsg);
                     return cmsg;
                 } else {
@@ -187,7 +187,7 @@ public class DBusCommChannel extends CommChannel {
     // Receive message: Reponse from calls (TODO: change so that it utilizes checkInput and recvImpl instead)
     @Override
     public CommMessage recvResponseFor(CommMessage request) throws IOException {
-        Long requestSerial = this.messages.get(request.id()).getSerial();
+        Long requestSerial = request.id();
 
         // Read response
         System.out.println("recvResponsefor");
