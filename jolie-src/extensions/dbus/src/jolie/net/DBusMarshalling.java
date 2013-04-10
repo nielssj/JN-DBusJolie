@@ -4,16 +4,23 @@
  */
 package jolie.net;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
+import org.freedesktop.dbus.Marshalling;
 import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.UInt32;
 import org.freedesktop.dbus.UInt64;
+import org.freedesktop.dbus.exceptions.DBusException;
+import org.freedesktop.dbus.types.DBusListType;
 import org.freedesktop.dbus.types.DBusMapType;
 
 /**
@@ -22,151 +29,156 @@ import org.freedesktop.dbus.types.DBusMapType;
  */
 public class DBusMarshalling {
 
-  public static Object[] valueToDBus(Value value, StringBuilder builder) {
-    ArrayList<Object> objects = new ArrayList<Object>();
+  private static Type getType(Value value) {
     Map<String, ValueVector> children = value.children();
 
     if (children.isEmpty()) {
       if (value.isDefined()) {
-        objects.add(value.valueObject());
-        builder.append(DBusMarshalling.nativeValueToDBusString(value));
+        return value.valueObject().getClass();
+      }
+      return null;
+    } else {
+      Type type = null;
+      Type nextType;
+
+      for (Entry<String, ValueVector> e : children.entrySet()) {
+        nextType = DBusMarshalling.getValueVectorType(e.getValue());
+        if (type != null) {
+          if (!DBusMarshalling.typesMatch(type, nextType)) {
+            throw new RuntimeException("DBus maps does not support several types. Trying to add " + nextType + " to an map of " + type);
+          }
+        } else {
+          type = nextType;
+        }
+      }
+
+      return new DBusMapType(String.class, type);
+    }
+  }
+
+  private static Type getValueVectorType(ValueVector vector) {
+    if (vector.size() > 1) {
+      Type type = null;
+      Type nextType;
+
+      for (Value v : vector) {
+        nextType = DBusMarshalling.getType(v);
+        if (type != null) {
+          if (!DBusMarshalling.typesMatch(type, nextType)) {
+            throw new RuntimeException("DBus arrays does not support several types. Trying to add " + nextType + " to an array of " + type);
+          }
+        } else {
+          type = nextType;
+        }
+      }
+
+      return new DBusListType(type);
+    } else {
+      return DBusMarshalling.getType(vector.first());
+    }
+  }
+   private static Boolean typesMatch(Type t1 , Type t2) {
+    if (t1 == t2) return true;
+    else if (t1 instanceof DBusMapType && t2 instanceof DBusMapType) {
+      DBusMapType map1 = (DBusMapType) t1;
+      DBusMapType map2 = (DBusMapType) t2;
+      
+      // 0 is key - always string
+      return DBusMarshalling.typesMatch(map1.getActualTypeArguments()[1], map2.getActualTypeArguments()[1]);
+    } else if (t1 instanceof DBusListType && t2 instanceof DBusListType) {
+      DBusListType list1 = (DBusListType) t1;
+      DBusListType list2 = (DBusListType) t2;
+      
+      return DBusMarshalling.typesMatch(list1.getActualTypeArguments()[0], list2.getActualTypeArguments()[0]);
+    } else {
+      return false;
+    }
+  }
+
+  public static Object[] valuesToDBus(Value value, StringBuilder builder) throws DBusException {
+    ArrayList<Object> objects = new ArrayList<Object>();
+    Map<String, ValueVector> children = value.children();
+    String typeString = "";
+    List<Type> types = new ArrayList<Type>();
+
+    if (children.isEmpty()) {
+      if (value.isDefined()) {
+        Object valObj = value.valueObject();
+
+        types.add(valObj.getClass());
+        objects.add(valObj);
       }
     } else if (children.size() == 1 && (children.get("params") != null)) {
       ValueVector params = children.get("params");
 
       for (Value v : params) {
-        objects.add(DBusMarshalling._valueToDBus(v, builder));
+        objects.add(DBusMarshalling.valueToDBus(v));
+        types.add(DBusMarshalling.getType(v));
       }
     } else {
-      // Please live up to the constraints!
+      throw new RuntimeException("Arguments to DBus must be either a single type or a map with one property named .params");
     }
 
-    return objects.toArray();
+    typeString = Marshalling.getDBusType(types.toArray(new Type[types.size()]));
+    builder.append(typeString);
+    return Marshalling.convertParameters(objects.toArray(), types.toArray(new Type[types.size()]), null);
   }
 
-  private static Object _valueToDBus(Value value, StringBuilder builder) {
+  private static Object valueToDBus(Value value) throws DBusException {
     Map<String, ValueVector> children = value.children();
 
     if (children.isEmpty()) {
       if (value.isDefined()) {
-        builder.append(DBusMarshalling.nativeValueToDBusString(value));
         return value.valueObject();
       }
       return null;
     } else {
-      //Object[][] map = new Object[children.size()][];
-      ArrayList<Object> map  = new ArrayList<Object>();
-      String type = "";
-      
-      builder.append("{s");    
-      int i = 0;
+      Map<String, Object> objects = new HashMap<String, Object>();
 
       for (Entry<String, ValueVector> e : children.entrySet()) {
-        if (i == 0) type = DBusMarshalling.valueVectorToDBusString(e.getValue());
-        else if (!type.equals(DBusMarshalling.valueVectorToDBusString(e.getValue()))) {
-          throw new RuntimeException(
-                  "D-Bus does not support maps with multiple types as values. Tried to add: "+
-                  DBusMarshalling.valueVectorToDBusString(e.getValue())+
-                  " with key "+
-                  e.getKey()+
-                  " to a map already containing: "+
-                  type);
-          // This i a bit of a lie 
-        }
-        
-        //map[i] = new Object[] { e.getKey(), DBusMarshalling.valueVectorToObject(e.getValue()) };
-        map.add(e.getKey());
-        map.add(DBusMarshalling.valueVectorToObject(e.getValue()));
-        i++;
+        objects.put(e.getKey(), DBusMarshalling.valueVectorToDBus(e.getValue()));
       }
-      builder.append(type);
-      builder.append("}");
-
-      return map.toArray();
+      return objects;
     }
   }
 
-  public static String nativeValueToDBusString(Value value) {
-    if (value.isBool()) {
-      return "b";
-    } else if (value.isInt()) {
-      return "u";
-    } else if (value.isString()) {
-      return "s";
-    } else if (value.isDouble()) {
-      return "d";
-    } else if (value.isLong()) {
-      return "x"; // Int64
-    }
-
-    return "";
-  }
-
-  public static String valueVectorToDBusString(ValueVector vector) {
-    if (vector.size() > 1) {
-      String arrType = DBusMarshalling.valueToDBusString(vector.first());
-      return "a(" + arrType + ")";
-    } else {
-      return DBusMarshalling.valueToDBusString(vector.first());
-    }
-  }
-
-  public static String valueToDBusString(Value value) {
-    StringBuilder typeString = new StringBuilder();
-    Map<String, ValueVector> children = value.children();
-
-    if (children.isEmpty()) {
-      if (value.isDefined()) {
-        typeString.append(DBusMarshalling.nativeValueToDBusString(value));
-      }
-    } else if (children.size() == 1 && (children.get("params") != null)) {
-      ValueVector params = children.get("params");
-
-      for (Value v : params) {
-        typeString.append(DBusMarshalling.nativeValueToDBusString(v));
-      }
-    } else {
-      // Please live up to the constraints!
-    }
-
-    return typeString.toString();
-  }
-
-  public static Object[] valueToObjectArray(Value value) {
-    ArrayList<Object> objects = new ArrayList<Object>();
-
-    if (value.children().isEmpty()) {
-      if (value.isDefined()) {
-        objects.add(value.valueObject());
-      }
-    } else {
-      for (Map.Entry< String, ValueVector> child : value.children().entrySet()) {
-        if (child.getValue().isEmpty() == false) {
-          objects.add(DBusMarshalling.valueVectorToObject(child.getValue()));
-        }
-      }
-    }
-
-    return objects.toArray();
-  }
-
-  public static Object valueVectorToObject(ValueVector vector) {
+  public static Object valueVectorToDBus(ValueVector vector) throws DBusException {
     if (vector.size() > 1) {
       ArrayList<Object> objects = new ArrayList<Object>();
 
-      for (int i = 0; i < vector.size(); i++) {
-        //objects.add(DBusMarshalling.valueToObjectArray(vector.get(i)));
-        
-        objects.add(DBusMarshalling._valueToDBus(vector.get(i), new StringBuilder()));
+      for (Value v : vector) {
+        objects.add(DBusMarshalling.valueToDBus(v));
       }
+
       return objects.toArray();
     } else {
-      Value first = vector.first();
-      if (first.children().isEmpty()) {
-        return first.valueObject();
-      } else {
-        return DBusMarshalling.valueToObjectArray(vector.first());
-      }
+      return DBusMarshalling.valueToDBus(vector.first());
+    }
+  }
+
+  public static Value singleDBusToJolie(Object val, Type t) {
+    System.out.println("singleDBusToJolie got type " + t);
+    if (t.equals(Integer.class)) {
+      return Value.create((Integer) val);
+    } else if (t.equals(String.class)) {
+      return Value.create((String) val);
+    } else if (t.equals(Boolean.class)) {
+      return Value.create((Boolean) val);
+    } else if (t.equals(Double.class)) {
+      return Value.create((Double) val);
+    } else if (t.equals(Long.class)) {
+      return Value.create((Long) val);
+    } else if (t instanceof DBusListType) {
+      DBusListType list = (DBusListType) t;
+
+
+
+      //System.out.println(i);
+      System.out.println(list.getActualTypeArguments()[0]);
+
+      throw new RuntimeException("Cannot translate DBus value to Jolie" + t);
+    } else {
+      throw new RuntimeException("Cannot translate DBus value to Jolie" + t);
     }
   }
 
@@ -174,26 +186,21 @@ public class DBusMarshalling {
     if (val == null || val.length == 0) {
       return Value.UNDEFINED_VALUE;
     } else {
-      Object v = val[0];
-
-      if (v instanceof UInt16) {
-        UInt16 i = (UInt16) v;
-        return Value.create(i.intValue());
-      } else if (v instanceof UInt32) {
-        UInt32 i = (UInt32) v;
-        return Value.create(i.intValue());
-      } else if (v instanceof UInt64) {
-        UInt64 i = (UInt64) v;
-        return Value.create(i.longValue());
-      } else if (v instanceof Double) {
-        return Value.create((Double) v);
-      } else if (v instanceof String) {
-        return Value.create((String) v);
-      } else if (v instanceof Boolean) {
-        return Value.create((Boolean) v);
-      } else {
-        throw new RuntimeException("Cannot translate DBus value to Jolie");
+      List<Type> types = new ArrayList<Type>();
+      try {
+        Marshalling.getJavaType(signature, types, -1);
+      } catch (DBusException ex) {
+        Logger.getLogger(DBusMarshalling.class.getName()).log(Level.SEVERE, null, ex);
       }
-    } 
+      System.out.println("types " + Arrays.deepToString(types.toArray()));
+
+      if (types.size() == 1) {
+        return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));
+      } else {
+        Value ret = Value.create();
+
+        return ret;
+      }
+    }
   }
 }
