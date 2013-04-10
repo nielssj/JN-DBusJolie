@@ -110,14 +110,24 @@ public class GeneralJolieTests {
     
     // The jolie program to call NextPage of Okular D-Bus API
     @Test
-    public void okularNextPage() {
+    public void okularNextPage() throws Exception {
         // Arrange
         String[] testArgs = new String[] { 
             "jolie-programs/NextPage.ol", 
             "-l", "../../jolie-src/extensions/dbus/dist/*", // Load D-Bus extension, 
             "-l", "../../jolie-src/extensions/sodep/dist/*", // TODO: Figure how to make Jolie not require a protocol when using D-Bus (Until then we just reference sodep without using it)
-            "-l", "../../jolie-src/lib/libmatthew" // unix.jar (TODO: D-Bus extension should reference this on its own?)
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java" // unix.jar/dbus.jar (TODO: D-Bus extension should reference this on its own?)
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieThread jt = new JolieThread(jpf+"/dbusserver.ol", args, "");
+        
+        // Act 
+        jt.start();
+        jt.join();
+        
+        // Assert
+        assertTrue(true);
+        
     }
 }
