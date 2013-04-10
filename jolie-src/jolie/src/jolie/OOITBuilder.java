@@ -561,7 +561,7 @@ public class OOITBuilder implements OLVisitor
 			aggregationMap,
 			redirectionMap
 		);
-		
+		// dbus
 		if ( n.location().toString().equals( Constants.LOCAL_LOCATION_KEYWORD ) ) {
 			try {
 				interpreter.commCore().addLocalInputPort( inputPort );
