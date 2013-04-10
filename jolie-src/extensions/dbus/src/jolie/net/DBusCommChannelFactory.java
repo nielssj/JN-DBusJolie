@@ -33,25 +33,12 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-import cx.ath.matthew.debug.Debug;
-import java.io.File;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar", "debug-enable-1.1.jar"})
+@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusCommChannelFactory extends CommChannelFactory
 {
 	public DBusCommChannelFactory( CommCore commCore )
 	{
 		super( commCore );
-    try {
-      File f = new File("/home/jan/src/JN-DBusJolie/jolie-src/dist/debug.conf");
-      System.out.println(f.exists());
-      System.out.println(f);
-      Debug.loadConfig(f);
-    } catch (IOException ex) {
-      Logger.getLogger(DBusCommChannelFactory.class.getName()).log(Level.SEVERE, null, ex);
-    }
 	}
   
   public static DBusCommChannel createChannel( URI location, InputPort port ) throws DBusException, IOException {
