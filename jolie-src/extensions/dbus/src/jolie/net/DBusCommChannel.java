@@ -41,26 +41,25 @@ public class DBusCommChannel extends CommChannel {
     OutputPort port;
     private String connectionName;
     private String objectPath;
-    
-    // Messages being executed indexed by Jolie message id
-    // Values: Dbus message serial
-    // Key: Jolie message id
-    ConcurrentHashMap<Long, Message> messages;  
+    private boolean isInputPort;
     
     // Detected messages waiting to be scheduled for execution by CommCore
-    ConcurrentLinkedQueue<Message> inputQueue;  
+    ConcurrentLinkedQueue<Long> inputQueue;  
+    // Messages being executed or waiting to be, indexed by D-Bus serial
+    ConcurrentHashMap<Long, Message> messages;
     
     
     // Constructor: Save details and instantiate collections
-    public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location)
+    public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort)
             throws IOException, ParseException, DBusException {
         super();
 
         this.transport = transport;
         this.connectionName = connectionName;
         this.objectPath = objectPath;
+        this.inputQueue = new ConcurrentLinkedQueue<Long>();
         this.messages = new ConcurrentHashMap<Long, Message>();
-        this.inputQueue = new ConcurrentLinkedQueue<Message>();
+        this.isInputPort = isInputPort;
 
         System.out.printf("CommChannel init - ConnectionName: %s \n", this.connectionName);
         System.out.printf("CommChannel init - Objectpath: %s \n", this.objectPath);
@@ -93,14 +92,33 @@ public class DBusCommChannel extends CommChannel {
     // Blocking: check input stream and add to queue
     public boolean checkInput() throws IOException, DBusException {
         Message m = transport.min.readMessage();
-
-        if (m != null && !this.inputQueue.contains(m)) {
-            System.out.println("New message received: " + m);
-            this.inputQueue.add(m);
+        Long s = m.getSerial();
+        
+        if (!this.inputQueue.contains(s)) {
+            this.messages.put(s, m);
+            this.inputQueue.add(s);
             return true;
-        }
+        } 
 
         return false;
+    }
+    
+    private Message checkInputSpecific(Long serial) throws IOException, DBusException {
+        if(this.inputQueue.remove(serial)) {
+            return this.messages.get(serial);
+        } else {
+            while(true) {
+                Message m = transport.min.readMessage();
+                String so = m.getSource();
+                Long s = m.getReplySerial();
+                if(m instanceof MethodReturn) {
+                    return m;
+                } else {
+                    this.messages.put(s, m);
+                    this.inputQueue.add(s);
+                }
+            } 
+        }
     }
     
     // Send message: Calls and returns (OutputPort/InputPort)
@@ -122,19 +140,22 @@ public class DBusCommChannel extends CommChannel {
         
         Message m;
         try {
-            if(messages.containsKey(id))
+            if(isInputPort)
             {
                 // Response to method call (InputPort)
-                MethodCall imsg = (MethodCall)messages.get(id);
                 if(!message.isFault())
                 {
-                    m = new MethodReturn(imsg, typeString, values);
+                    m = new MethodReturn(
+                        (MethodCall)messages.remove(message.id()), 
+                        typeString, 
+                        values);
                 }
                 else
                 {
-                    m = new Error(imsg, message.fault());
+                    m = new Error(
+                        messages.remove(message.id()), 
+                        message.fault());
                 }
-               messages.remove(id);
             }
             else
             {
@@ -146,9 +167,7 @@ public class DBusCommChannel extends CommChannel {
                     message.operationName(),
                     (byte) 0,
                     typeString,
-                    values);
-                
-                this.messages.put(message.id(), m);
+                    values);        
             }
         } catch (DBusException e) {
             System.out.println("DBus Exception in sendimpl");
@@ -165,17 +184,14 @@ public class DBusCommChannel extends CommChannel {
         
         try {
             if (!inputQueue.isEmpty()) {
-                Message msg = this.inputQueue.poll();
+                Message msg = this.messages.get(this.inputQueue.poll());
                 System.out.printf("recvimpl - Pulled D-Bus message from queue: %s\n", msg);
                 
                 if (msg instanceof MethodCall) {
-                    System.out.printf("recvimpl - Marshalling to Jolie CommMessage: %s\n", msg);
+                    System.out.printf("recvimpl - is MethodCall, marshalling to Jolie CommMessage: %s\n", msg);
                     
-                    MethodCall call = (MethodCall) msg;
-                    Value val = DBusMarshalling.ToJolieValue(call.getParameters(), call.getSig());
-                    
-                    CommMessage cmsg = CommMessage.createRequest(msg.getName(), "/", val);
-                    this.messages.put(cmsg.id(), msg);
+                    Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig());
+                    CommMessage cmsg = new CommMessage(msg.getSerial(), msg.getName(), "/", val, null);
                     
                     System.out.printf("recvimpl - Marshalled returning CommMessage to CommCore: %s\n", cmsg);
                     return cmsg;
@@ -190,53 +206,44 @@ public class DBusCommChannel extends CommChannel {
         }
     }
 
-    // Receive message: Reponse from calls (TODO: change so that it utilizes checkInput and recvImpl instead)
     @Override
     public CommMessage recvResponseFor(CommMessage request) throws IOException {
-        Long requestSerial = this.messages.get(request.id()).getSerial();
-
-        // Read response
-        System.out.println("recvResponsefor");
-        System.out.printf("reqest.operationName %s \n", request.operationName());
-
-        Message m;
+        System.out.println("recvResponsefor - Called");
+        System.out.printf("recvResponsefor - OperationName: %s \n", request.operationName());
+        
+        Message msg;
+        CommMessage cmsg;     
         try {
-            while (true) {
-                m = this.transport.min.readMessage();
-                if (m != null) {
-                    if (m instanceof MethodReturn) {
-                        MethodReturn resp = (MethodReturn) m;
-                        if (requestSerial == resp.getReplySerial()) {
-                            Value v = DBusMarshalling.ToJolieValue(resp.getParameters(), resp.getSig());
-                            return CommMessage.createResponse(request, v);
-                        } else {
-                            System.out.println("Wrong serial");
-                            System.out.println(resp);
-                        }
-                    } else if (m instanceof Error) {
-                        Error err = (Error) m;
-                        Object[] parameters = err.getParameters();
-
-                        return CommMessage.createFaultResponse(
-                                request,
-                                new FaultException(err.getName(), (parameters != null && parameters.length > 0) ? (String) parameters[0] : ""));
-                    } else {
-                        System.out.println("Message was not methodreturn");
-                        System.out.println(m);
-                    }
-                } else {
-                    System.out.println("Message was null :(");
+            System.out.println("recvResponsefor - Looking for response in input transport");
+            while (true) 
+            { 
+                msg = transport.min.readMessage(); // Blocking
+                
+                System.out.println("recvResponsefor - Input found, checking type..");
+                if (msg instanceof MethodReturn) {
+                    System.out.printf("recvResponsefor - Response appears to be successful, marshalling to Jolie CommMessage: %s\n", msg);
+                    Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig());
+                    return new CommMessage(msg.getSerial(), msg.getName(), "/", val, null); 
+                } else if(msg instanceof Error) {
+                    System.out.printf("recvResponsefor - Response appears to be an error, marshalling to Jolie CommMessage: %s\n", msg);
+                    Object[] parameters = msg.getParameters();
+                    return new CommMessage(msg.getSerial(), msg.getName(), "/", null, 
+                            new FaultException(msg.getName(), (parameters != null && parameters.length > 0) ? (String) parameters[0] : "")); 
                 }
-
+                
+                System.out.println("recvResponsefor - Not a supported response type, continuing to look in input transport!");
             }
         } catch (DBusException e) {
-            System.out.println("DBus Exception in sendimpl");
-            System.out.println(e);
+            System.out.printf("recvResponsefor - DBusException while reading input transport: %s\n", e);
             throw new IOException(e);
         }
     }
 
     protected void closeImpl() throws IOException {
+        // TODO: Implement?
+    }
+    
+    public void disconnect() throws IOException {
         this.transport.disconnect();
     }
 
