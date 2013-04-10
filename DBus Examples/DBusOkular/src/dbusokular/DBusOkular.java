@@ -1,6 +1,7 @@
 package dbusokular;
 
 import java.util.Arrays;
+import org.freedesktop.DBus;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
 import org.freedesktop.dbus.Message;
@@ -8,6 +9,7 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.MethodReturn;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.UInt32;
+import org.freedesktop.dbus.exceptions.DBusExecutionException;
 
 /**
  *
@@ -162,6 +164,7 @@ public class DBusOkular {
                 System.out.println("I got something!: "+call);
                 
                 Message ret = null;
+                System.out.println(Arrays.deepToString(call.getParameters()));
                 if ("Introspect".equals(call.getName())) {
                     /*String data = "<node name=\"/\"><interface name=\"org.testname\">" +
 "            <method name=\"Hello\">" +
@@ -170,11 +173,11 @@ public class DBusOkular {
                     
                     
                     ret = new MethodReturn(call, "s", data);*/
-                    
-                    ret = new org.freedesktop.dbus.Error(call, new NoSuchMethodException("This service is not introspectable"));
+                    ret = new org.freedesktop.dbus.Error(call, new DBus.Error.UnknownMethod(""));
+                } else if ("".equals(call.getName())) {
+                   //ret = new MethodReturn(call, "u", call.getParameters()[0]);
                 } else {
-                  Arrays.deepToString(call.getParameters());
-                  ret = new MethodReturn(call, "s", "Hello "+call.getParameters()[0]);
+                  ret = new MethodReturn(call, "ai", new Object[] {new Integer[] { 42, 4}});
                 }
                 conn.mout.writeMessage(ret);
             }

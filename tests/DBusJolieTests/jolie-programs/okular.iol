@@ -2,6 +2,9 @@ type testtype:void {
 	.params[1, *]: undefined
 }
 
+type returnType:void {
+}
+
 interface Okular {
 	OneWay: 
 		slotNextPage( void ),
@@ -18,4 +21,10 @@ interface Okular {
 interface Okular__shell {
 	RequestResponse: 
 		close ( void )( bool )
+}
+
+interface HelloServer {
+	RequestResponse:
+		test (testtype) (returnType),
+		intm (testtype) (int)
 }

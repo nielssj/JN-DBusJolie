@@ -2,14 +2,18 @@ include "okular.iol"
 include "console.iol"
 
 outputPort Okular {
-	//Location: "dbus:/org.kde.okular-6662:/okular"
-	Location: "dbus:/org.testname:/okular"
+	Location: "dbus:/org.kde.okular-2982:/okular"
 	Interfaces: Okular
 }
 
 outputPort OkularShell {
-	Location: "dbus:/org.kde.okular-6359:/okular/okular__Shell"
+	Location: "dbus:/org.kde.okular-2982:/okular/okular__Shell"
 	Interfaces: Okular__shell
+}
+
+outputPort Hello {
+	Location: "dbus:/org.testname:/"
+	Interfaces: HelloServer
 }
 
 main
@@ -31,15 +35,18 @@ main
 	//arg2.params[3].arr[1] = 1;
 
 
-	testmethod2@Okular ( arg2 )
-*/
-	
-	
-	//openDocument@Okular( "~/Downloads/dbus-java.pdf" );
+
 
 	arg.params[0].field1 = "~/Downloads/dbus-java.pdf";
 	arg.params[0].field2 = "lol";
-	testmethod2@Okular( arg );
+	Map@Hello(arg)()
+
+	testmethod2@Okular ( arg2 )
+
+	
+	
+	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
+
 	goToPage@Okular( 10 );
 	currentPage@Okular( ) ( response );
 	println@Console( "currentPage is " + response )();
@@ -48,5 +55,13 @@ main
 
 	close@OkularShell( ) ( response3 );
 	println@Console( "response to close is " + response3 )()
-	
+	*/
+
+
+	arg.params[0] = 12;
+	arg.params[1] = "string";
+	arg.params[2].field1[0] = 11;
+	arg.params[2].field2[0] = 1;
+	intm@Hello(arg)(response);
+	println@Console( "response to test is " + response )()
 }
