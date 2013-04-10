@@ -1,7 +1,6 @@
 package dbusokular;
 
-import java.text.ParseException;
-import javax.xml.soap.MessageFactory;
+import java.util.Arrays;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
 import org.freedesktop.dbus.Message;
@@ -9,7 +8,6 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.MethodReturn;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.UInt32;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  *
@@ -23,6 +21,7 @@ public class DBusOkular {
     public static void main(String[] args) throws Exception  {
         testAndExpose();
         //talkToOkular();
+        //talkToTwiceService();
     }
     
     public static void talkToOkular() throws Exception {
@@ -65,6 +64,34 @@ public class DBusOkular {
         UInt32 numPages = NumberOfPages(conn, okularInstance);
         System.out.println("Number of pages: " + numPages); 
         
+    }
+    
+    public static void talkToTwiceService() throws Exception {
+        // Initialize D-Bus connection
+        BusAddress address = new BusAddress(System.getenv("DBUS_SESSION_BUS_ADDRESS"));
+        Transport conn = new Transport(address);
+        
+        Message m = new MethodCall("org.freedesktop.DBus", "/",
+        "org.freedesktop.DBus", "Hello", (byte) 0, null);
+        conn.mout.writeMessage(m);
+        MethodReturn response = (MethodReturn) conn.min.readMessage();
+        System.out.println("My unique name is: "+response.getParameters()[0]);
+        
+        int val = 10;
+        m = new MethodCall("org.testname", "/object",
+        "org.testname", "twice", (byte) 0, "u", val);
+        System.out.printf("Calling twice (val = %d) service..\n", val);
+        conn.mout.writeMessage(m);
+        
+        System.out.println("Receiving response..");
+        while (true) {
+            m = conn.min.readMessage();
+            if(m != null && m instanceof MethodReturn)
+            {
+                System.out.println("Received response: " + m.getParameters()[0]);
+                return;
+            }
+        }
     }
     
     public static UInt32 NumberOfPages(Transport conn, String okularIntance) throws Exception
@@ -146,7 +173,8 @@ public class DBusOkular {
                     
                     ret = new org.freedesktop.dbus.Error(call, new NoSuchMethodException("This service is not introspectable"));
                 } else {
-                    ret = new MethodReturn(call, "s", "Hello "+call.getParameters()[0]);
+                  Arrays.deepToString(call.getParameters());
+                  ret = new MethodReturn(call, "s", "Hello "+call.getParameters()[0]);
                 }
                 conn.mout.writeMessage(ret);
             }

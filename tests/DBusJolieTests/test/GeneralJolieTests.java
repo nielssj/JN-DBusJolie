@@ -95,7 +95,7 @@ public class GeneralJolieTests {
             "-l", "../../jolie-src/extensions/sodep/dist/*", 
             "-l", "../../jolie-src/extensions/dbus/dist/*",
             "-l", "../../jolie-src/lib/libmatthew",
-            "-l", "../../jolie-src/extensions/dbus/lib"
+            "-l", "../../jolie-src/lib/dbus-java"
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
         JolieThread server = new JolieThread(jpf+"/dbusserver.ol", args, "");

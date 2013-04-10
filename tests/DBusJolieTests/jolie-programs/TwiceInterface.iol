@@ -1,3 +1,4 @@
 interface TwiceInterface {
-	RequestResponse: twice( int ) ( int )
+	RequestResponse: 
+	  twice( int ) ( int )
 }

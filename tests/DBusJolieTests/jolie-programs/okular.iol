@@ -1,9 +1,5 @@
 type testtype:void {
-	.field1 [1 ,2 ]: string
-	.field2: string
-	.field3: void {
-		.values [1, 2]:int
-	}
+	.params[1, *]: undefined
 }
 
 interface Okular {
@@ -11,7 +7,8 @@ interface Okular {
 		slotNextPage( void ),
 		goToPage( int ),
 		openDocument( string ),
-		testmethod ( testtype ) 
+		testmethod (int),
+		testmethod2 ( testtype ) 
 	RequestResponse: 
 		currentPage ( void ) ( int ),
 		currentDocument ( void ) ( string )
