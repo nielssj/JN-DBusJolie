@@ -177,6 +177,7 @@ public class DBusOkular {
                 } else if ("".equals(call.getName())) {
                    //ret = new MethodReturn(call, "u", call.getParameters()[0]);
                 } else {
+                  Arrays.deepToString(call.getParameters());
                   ret = new MethodReturn(call, "ai", new Object[] {new Integer[] { 42, 4}});
                 }
                 conn.mout.writeMessage(ret);
