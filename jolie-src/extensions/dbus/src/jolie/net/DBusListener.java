@@ -21,7 +21,7 @@ public class DBusListener extends CommListener implements Runnable
     {
         try
         {
-            channel.closeImpl();
+            channel.disconnect();
         }
         catch (IOException ex)
         {
