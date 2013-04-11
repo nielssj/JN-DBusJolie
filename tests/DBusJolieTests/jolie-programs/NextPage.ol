@@ -2,12 +2,12 @@ include "okular.iol"
 include "console.iol"
 
 outputPort Okular {
-	Location: "dbus:/org.kde.okular-2982:/okular"
+	Location: "dbus:/org.kde.okular-3130:/okular"
 	Interfaces: Okular
 }
 
 outputPort OkularShell {
-	Location: "dbus:/org.kde.okular-2982:/okular/okular__Shell"
+	Location: "dbus:/org.kde.okular-3130:/okular/okular__Shell"
 	Interfaces: Okular__shell
 }
 
@@ -47,10 +47,10 @@ main
 	
 	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
 
-	goToPage@Okular( 10 );
+	goToPage@Okular( 10 );*/
 	currentPage@Okular( ) ( response );
-	println@Console( "currentPage is " + response )();
-	currentDocument@Okular( ) ( response2 );
+	println@Console( "currentPage is " + response )()
+	/*currentDocument@Okular( ) ( response2 );
 	println@Console( "currentDocument is " + response2 )();
 
 	close@OkularShell( ) ( response3 );
@@ -58,10 +58,10 @@ main
 	*/
 
 
-	arg.params[0] = 12;
+	/*arg.params[0] = 12;
 	arg.params[1] = "string";
 	arg.params[2].field1[0] = 11;
 	arg.params[2].field2[0] = 1;
 	intm@Hello(arg)(response);
-	println@Console( "response to test is " + response )()
+	println@Console( "response to test is " + response )()*/
 }
