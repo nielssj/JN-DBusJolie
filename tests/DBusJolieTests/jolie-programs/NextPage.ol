@@ -57,11 +57,17 @@ main
 	println@Console( "response to close is " + response3 )()
 	*/
 
-
+	hello[0] = 0;
+	hello[1] = 1;
+	test@Hello(hello)(response);
+	println@Console( "response to test is " + response.params[0].field1 )();
+	println@Console( "response to test is " + response.params[0].field2 )() 
+/*
 	arg.params[0] = 12;
 	arg.params[1] = "string";
 	arg.params[2].field1[0] = 11;
 	arg.params[2].field2[0] = 1;
 	intm@Hello(arg)(response);
-	println@Console( "response to test is " + response )()
+	println@Console( "response to test is " + response )() 
+	*/
 }

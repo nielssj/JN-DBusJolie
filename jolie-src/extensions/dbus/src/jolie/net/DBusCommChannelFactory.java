@@ -38,7 +38,7 @@ public class DBusCommChannelFactory extends CommChannelFactory
 {
 	public DBusCommChannelFactory( CommCore commCore )
 	{
-		super( commCore );
+		super( commCore );        
 	}
   
   public static DBusCommChannel createChannel( URI location, InputPort port ) throws DBusException, IOException {

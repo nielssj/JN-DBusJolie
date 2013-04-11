@@ -11,25 +11,18 @@ package jolie.net;
 import java.io.IOException;
 import java.net.URI;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import jolie.Interpreter;
 import jolie.net.ports.OutputPort;
 import jolie.runtime.FaultException;
 import jolie.runtime.Value;
-import jolie.runtime.ValueVector;
-import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.Message;
 import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.MethodReturn;
 import org.freedesktop.dbus.Error;
 import org.freedesktop.dbus.Transport;
-import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.UInt32;
-import org.freedesktop.dbus.UInt64;
 import org.freedesktop.dbus.exceptions.DBusException;
 
 public class DBusCommChannel extends CommChannel {

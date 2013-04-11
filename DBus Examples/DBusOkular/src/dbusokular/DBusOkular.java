@@ -1,6 +1,7 @@
 package dbusokular;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import org.freedesktop.DBus;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
@@ -178,7 +179,21 @@ public class DBusOkular {
                    //ret = new MethodReturn(call, "u", call.getParameters()[0]);
                 } else {
                   Arrays.deepToString(call.getParameters());
-                  ret = new MethodReturn(call, "ai", new Object[] {new Integer[] { 42, 4}});
+                  
+                  // Map
+                  HashMap<String, String[]> datMap = new HashMap<String, String[]>();
+                  datMap.put("field1", new String[] {"field1.1", "field1.2"});
+                  datMap.put("field2", new String[] {"field2.1", "field 2.2"});
+                  ret = new MethodReturn(call, "a{sas}", new Object[] {datMap});
+                  
+                  // String array
+                  //ret = new MethodReturn(call, "as", new Object[] {new Object[] {"string1", "string2"}});
+                  
+                  // Uint array
+                  //ret = new MethodReturn(call, "au", new Object[] {new Object[] {1, 2}});
+                  
+                  // int string 
+                  //ret = new MethodReturn(call, "is", new Object[] {1, "one"});
                 }
                 conn.mout.writeMessage(ret);
             }
