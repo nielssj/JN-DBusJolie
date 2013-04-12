@@ -28,6 +28,7 @@ import org.freedesktop.dbus.types.DBusMapType;
  * @author niels
  */
 public class DBusMarshalling {
+  private static boolean TRACE = false;
 
   private static Type getType(Value value) {
     Map<String, ValueVector> children = value.children();
@@ -157,7 +158,7 @@ public class DBusMarshalling {
   }
 
   public static Value singleDBusToJolie(Object val, Type t) {
-    System.out.println("singleDBusToJolie got type " + t);
+    if (TRACE) System.out.println("singleDBusToJolie got type " + t);
     if (t.equals(Integer.class)) {
       return Value.create((Integer) val);
     } else if (t.equals(String.class)) {
@@ -173,8 +174,8 @@ public class DBusMarshalling {
 
 
 
-      //System.out.println(i);
-      System.out.println(list.getActualTypeArguments()[0]);
+      //if (TRACE) System.out.println(i);
+      if (TRACE) System.out.println(list.getActualTypeArguments()[0]);
 
       throw new RuntimeException("Cannot translate DBus value to Jolie" + t);
     } else {
@@ -192,7 +193,7 @@ public class DBusMarshalling {
       } catch (DBusException ex) {
         Logger.getLogger(DBusMarshalling.class.getName()).log(Level.SEVERE, null, ex);
       }
-      System.out.println("types " + Arrays.deepToString(types.toArray()));
+      if (TRACE) System.out.println("types " + Arrays.deepToString(types.toArray()));
 
       if (types.size() == 1) {
         return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));

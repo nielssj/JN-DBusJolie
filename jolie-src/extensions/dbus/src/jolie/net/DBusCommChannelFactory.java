@@ -50,9 +50,7 @@ public class DBusCommChannelFactory extends CommChannelFactory
     
     boolean nameObtained = channel.obtainName(connectionName);   
     
-    System.out.println("Name obtained: "+nameObtained);
-    
-     return channel;
+    return channel;
   }
 
     public CommChannel createChannel( URI location, OutputPort port )
@@ -79,7 +77,6 @@ public class DBusCommChannelFactory extends CommChannelFactory
         "org.freedesktop.DBus", "Hello", (byte) 0, null);
         transport.mout.writeMessage(m);
         m = transport.min.readMessage();
-        System.out.println("Response to Hello is: "+m);
     }
     catch (ParseException ex)
     {

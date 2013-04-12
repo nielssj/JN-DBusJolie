@@ -33,7 +33,8 @@ import org.freedesktop.dbus.UInt64;
 import org.freedesktop.dbus.exceptions.DBusException;
 
 public class DBusCommChannel extends CommChannel {
-
+    private static boolean TRACE = false;
+    
     private Transport transport;
     String uniqueName;
     OutputPort port;
@@ -59,8 +60,8 @@ public class DBusCommChannel extends CommChannel {
         this.sentMessages = new ConcurrentHashMap<Long, Message>();
         this.isInputPort = isInputPort;
 
-        System.out.printf("CommChannel init - ConnectionName: %s \n", this.connectionName);
-        System.out.printf("CommChannel init - Objectpath: %s \n", this.objectPath);
+        if (TRACE) System.out.printf("CommChannel init - ConnectionName: %s \n", this.connectionName);
+        if (TRACE) System.out.printf("CommChannel init - Objectpath: %s \n", this.objectPath);
     }
 
     // Attempt to reserve a name in DBus daemon
@@ -122,8 +123,8 @@ public class DBusCommChannel extends CommChannel {
 
     // Send message: Calls and returns (OutputPort/InputPort)
     protected void sendImpl(CommMessage message) throws IOException {
-        System.out.println("sendimpl - Called");
-        System.out.printf("sendimpl - Operationname: %s\n", message.operationName());
+        if (TRACE) System.out.println("sendimpl - Called");
+        if (TRACE) System.out.printf("sendimpl - Operationname: %s\n", message.operationName());
 
         long id = message.id();
         StringBuilder builder = new StringBuilder();
@@ -132,7 +133,7 @@ public class DBusCommChannel extends CommChannel {
         try {
             Object[] values = DBusMarshalling.valuesToDBus(message.value(), builder);
             String typeString = builder.toString();
-            System.out.printf("sendimpl - Typestring: %s \n", typeString);
+            if (TRACE) System.out.printf("sendimpl - Typestring: %s \n", typeString);
             if (isInputPort) {
                 // Response to method call (InputPort)
                 if (!message.isFault()) {
@@ -158,8 +159,8 @@ public class DBusCommChannel extends CommChannel {
                 sentMessages.put(message.id(), m);
             }
         } catch (DBusException e) {
-            System.out.println("DBus Exception in sendimpl");
-            System.out.println(e);
+            if (TRACE) System.out.println("DBus Exception in sendimpl");
+            if (TRACE) System.out.println(e);
             throw new IOException(e);
         }
 
@@ -168,20 +169,20 @@ public class DBusCommChannel extends CommChannel {
 
     // Receive message: Incomming responses (TODO) and incomming calls (OutputPort/InputPort)
     protected CommMessage recvImpl() throws IOException {
-        System.out.println("recvimpl - Called");
+        if (TRACE) System.out.println("recvimpl - Called");
 
         try {
             if (!inputQueue.isEmpty()) {
                 Message msg = this.messages.get(this.inputQueue.poll());
-                System.out.printf("recvimpl - Pulled D-Bus message from queue: %s\n", msg);
+                if (TRACE) System.out.printf("recvimpl - Pulled D-Bus message from queue: %s\n", msg);
 
                 if (msg instanceof MethodCall) {
-                    System.out.printf("recvimpl - is MethodCall, marshalling to Jolie CommMessage: %s\n", msg);
+                    if (TRACE) System.out.printf("recvimpl - is MethodCall, marshalling to Jolie CommMessage: %s\n", msg);
 
                     Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig());
                     CommMessage cmsg = new CommMessage(msg.getSerial(), msg.getName(), "/", val, null);
 
-                    System.out.printf("recvimpl - Marshalled returning CommMessage to CommCore: %s\n", cmsg);
+                    if (TRACE) System.out.printf("recvimpl - Marshalled returning CommMessage to CommCore: %s\n", cmsg);
                     return cmsg;
                 } else {
                     throw new RuntimeException("recvimpl - Unsupported message type");
@@ -196,29 +197,29 @@ public class DBusCommChannel extends CommChannel {
 
     @Override
     public CommMessage recvResponseFor(CommMessage request) throws IOException {
-        System.out.println("recvResponsefor - Called");
-        System.out.printf("recvResponsefor - OperationName: %s \n", request.operationName());
+        if (TRACE) System.out.println("recvResponsefor - Called");
+        if (TRACE) System.out.printf("recvResponsefor - OperationName: %s \n", request.operationName());
 
         MethodCall call = (MethodCall) sentMessages.remove(request.id());
         try {
-            System.out.println("recvResponsefor - Looking for response in input transport");
+            if (TRACE) System.out.println("recvResponsefor - Looking for response in input transport");
             Message msg = checkInputSpecific(call.getSerial());
 
-            System.out.println("recvResponsefor - Input found, checking type..");
+            if (TRACE) System.out.println("recvResponsefor - Input found, checking type..");
             if (msg instanceof MethodReturn) {
-                System.out.printf("recvResponsefor - Response appears to be successful, marshalling to Jolie CommMessage: %s\n", msg);
+                if (TRACE) System.out.printf("recvResponsefor - Response appears to be successful, marshalling to Jolie CommMessage: %s\n", msg);
                 Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig());
                 return CommMessage.createResponse(request, val);
             } else if (msg instanceof Error) {
-                System.out.printf("recvResponsefor - Response appears to be an error, marshalling to Jolie CommMessage: %s\n", msg);
+                if (TRACE) System.out.printf("recvResponsefor - Response appears to be an error, marshalling to Jolie CommMessage: %s\n", msg);
                 Object[] parameters = msg.getParameters();
                 return CommMessage.createFaultResponse(request, 
                         new FaultException(msg.getName(), (parameters != null && parameters.length > 0) ? (String) parameters[0] : ""));
             }
 
-            System.out.println("recvResponsefor - Not a supported response type, continuing to look in input transport!");
+            if (TRACE) System.out.println("recvResponsefor - Not a supported response type, continuing to look in input transport!");
         } catch (DBusException e) {
-            System.out.printf("recvResponsefor - DBusException while reading input transport: %s\n", e);
+            if (TRACE) System.out.printf("recvResponsefor - DBusException while reading input transport: %s\n", e);
             throw new IOException(e);
         }
         
