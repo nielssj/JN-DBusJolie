@@ -89,6 +89,29 @@ public class GeneralJolieTests {
     }
     
     @Test
+    public void parallelClients() throws Exception {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieSubProcess server = new JolieSubProcess(jpf+"/dbusserver.ol", args);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/parallelclient.ol", args);
+        
+        // Act 
+        server.start();
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Assert
+        assertEquals("1014", client.getOutput());
+    }
+    
+    @Test
     public void simpleServer() throws Exception {
         // Arrange
         String[] testArgs = new String[] { 
