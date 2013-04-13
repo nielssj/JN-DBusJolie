@@ -96,7 +96,7 @@ public class DBusMarshalling {
     }
   }
 
-  public static Object[] valuesToDBus(Value value, StringBuilder builder) throws DBusException {
+  public static synchronized Object[] valuesToDBus(Value value, StringBuilder builder) throws DBusException {
     ArrayList<Object> objects = new ArrayList<Object>();
     Map<String, ValueVector> children = value.children();
     String typeString = "";
