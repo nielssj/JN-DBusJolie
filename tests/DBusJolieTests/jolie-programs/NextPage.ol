@@ -55,19 +55,30 @@ main
 
 	close@OkularShell( ) ( response3 );
 	println@Console( "response to close is " + response3 )()
-	*/
+	
 
+
+	arg.params[0].field1[0] = "field1.1";
+	arg.params[0].field1[1] = "field1.2";
+	arg.params[0].field2[0] = "field2.1";
+	arg.params[0].field2[1] = "field2.2";
+
+	intm@Hello(arg)(resp);
+
+	// Recieve a map
 	hello[0] = 0;
 	hello[1] = 1;
 	test@Hello(hello)(response);
-	println@Console( "response to test is " + response.params[0].field1 )();
-	println@Console( "response to test is " + response.params[0].field2 )() 
-/*
-	arg.params[0] = 12;
-	arg.params[1] = "string";
-	arg.params[2].field1[0] = 11;
-	arg.params[2].field2[0] = 1;
-	intm@Hello(arg)(response);
-	println@Console( "response to test is " + response )() 
-	*/
+	println@Console( "response to test is " + response.params[0].field1[0] )();
+	println@Console( "response to test is " + response.params[0].field1[1] )();
+	println@Console( "response to test is " + response.params[0].field2[0] )();
+	println@Console( "response to test is " + response.params[0].field2[1] )() 
+*/
+
+	// Recieve a array
+	hello[0] = 0;
+	hello[1] = 1;
+	test@Hello(hello)(response);
+	println@Console( "response to test is " + response.params[0] )();
+	println@Console( "response to test is " + response.params[1] )()
 }

@@ -161,7 +161,6 @@ public class DBusMarshalling {
   }
 
   public static Value singleDBusToJolie(Object val, Type t) {
-
     // TODO support more types
     if (DBusMarshalling.specialType(t)) {
       return DBusMarshalling.specialTypeToJolieValue(val, t);
@@ -202,35 +201,85 @@ public class DBusMarshalling {
     return t instanceof DBusMapType || t instanceof Vector || t instanceof DBusListType;
   }
 
-  private static Value specialTypeToJolieValue(Object o, Type t) {
-    System.out.println("o is " + o);
-    System.out.println("oclass is " + o.getClass());
-    System.out.println("t is " + t);
-    if (t instanceof DBusMapType) {
-      Map m = (Map) o;
-      DBusMapType mType = (DBusMapType) t;
-      Value ret = Value.create();
-      Map<String, ValueVector> children = ret.children();
+  private static Value DBusMapToJolie(Map m, DBusMapType t) {
+    Value ret = Value.create();
+    Map<String, ValueVector> children = ret.children();
+    Type valType = t.getActualTypeArguments()[1];
 
-      for (Iterator it = m.entrySet().iterator(); it.hasNext();) {
-        Entry e = (Entry) it.next();
-        ValueVector v = ValueVector.create();
-        v.add(DBusMarshalling.singleDBusToJolie(e.getValue(), mType.getActualTypeArguments()[1]));
-        children.put((String) e.getKey(), v);
+    for (Iterator it = m.entrySet().iterator(); it.hasNext();) {
+      Entry e = (Entry) it.next();
+      ValueVector v = null;
+
+      if (valType instanceof DBusListType) {
+        v = DBusMarshalling.DBusListToJolie((Iterable) e.getValue(), (DBusListType) valType);
+      } else {
+        v = ValueVector.create();
+        v.add(DBusMarshalling.singleDBusToJolie(e.getValue(), valType));
       }
+      children.put((String) e.getKey(), v);
+    }
 
-      return ret;
-    } else if (t instanceof DBusListType) {
-      DBusListType lType = (DBusListType) t;
-      Value ret = Value.create();
-      Map<String, ValueVector> children = ret.children();
+    return ret;
+  }
 
-      Iterable it = (Iterable) o;
+  private static ValueVector DBusListToJolie(Object o, DBusListType t) {
+    Type valType = t.getActualTypeArguments()[0];
+    ValueVector v = ValueVector.create();
+    Iterable it;
 
-      ValueVector v = ValueVector.create();
+    if (o instanceof Iterable) {
+      it = (Iterable) o;
+
       for (Object obj : it) {
-        v.add(DBusMarshalling.singleDBusToJolie(obj, lType.getActualTypeArguments()[0]));
+        v.add(DBusMarshalling.singleDBusToJolie(obj, valType));
       }
+    } else {
+      if (valType.equals(Integer.class)) {
+        int[] arr = (int[]) o;
+
+        for (int i : arr) {
+          v.add(DBusMarshalling.singleDBusToJolie(i, valType));
+        }
+      } else if (valType.equals(Long.class)) {
+        long[] arr = (long[]) o;
+
+        for (long l : arr) {
+          v.add(DBusMarshalling.singleDBusToJolie(l, valType));
+        }
+      } else if (valType.equals(Byte.class)) {
+        byte[] arr = (byte[]) o;
+
+        for (byte b : arr) {
+          v.add(DBusMarshalling.singleDBusToJolie(b, valType));
+        }
+      } else if (valType.equals(Double.class)) {
+        double[] arr = (double[]) o;
+
+        for (double d : arr) {
+          v.add(DBusMarshalling.singleDBusToJolie(d, valType));
+        }
+      } else if (valType.equals(Boolean.class)) {
+        boolean[] arr = (boolean[]) o;
+
+        for (boolean b : arr) {
+          v.add(DBusMarshalling.singleDBusToJolie(b, valType));
+        }
+      } else {
+        throw new RuntimeException("Unrecognized array of simple type: " + valType);
+      }
+    }
+
+    return v;
+  }
+
+  private static Value specialTypeToJolieValue(Object o, Type t) {
+    if (t instanceof DBusMapType) {
+      return DBusMarshalling.DBusMapToJolie((Map) o, (DBusMapType) t);
+    } else if (t instanceof DBusListType) {
+      Value ret = Value.create();
+      Map<String, ValueVector> children = ret.children();
+      ValueVector v = DBusMarshalling.DBusListToJolie(o, (DBusListType) t);
+
       children.put("", v);
 
       return ret;
@@ -257,8 +306,16 @@ public class DBusMarshalling {
         ValueVector vector = ret.getChildren("params");
 
         for (int i = 0; i < types.size(); i++) {
-          if (DBusMarshalling.specialType(types.get(i))) {
-            vector.add(DBusMarshalling.specialTypeToJolieValue(val[i], types.get(i)));
+          Type type = types.get(i);
+
+          if (type instanceof DBusListType) {
+            ValueVector temp = DBusMarshalling.DBusListToJolie(val[i], (DBusListType) type);
+
+            for (Value v : temp) {
+              vector.add(v);
+            }
+          } else if (type instanceof DBusMapType) {
+            vector.add(DBusMarshalling.DBusMapToJolie((Map) val[i], (DBusMapType) types.get(i)));
           } else {
             vector.add(DBusMarshalling.singleDBusToJolie(val[i], types.get(i)));
           }
