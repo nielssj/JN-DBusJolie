@@ -56,7 +56,7 @@ public class GeneralJolieTests {
     public void file() throws Exception {
         // Arrange
         JolieThread p = new JolieThread(
-                jpf+"/HelloFileSystem.ol", defaultArgs, "MyFile.txt");
+                jpf+"/HelloFileSystem.ol", defaultArgs);
         
         // Act
         p.start();
@@ -100,7 +100,7 @@ public class GeneralJolieTests {
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
         JolieSubProcess server = new JolieSubProcess(jpf+"/dbusserver.ol", args);
-        JolieSubProcess client = new JolieSubProcess(jpf+"/parallelclient.ol", args);
+        JolieThread client = new JolieThread(jpf+"/parallelclient.ol", args);
         
         // Act 
         server.start();
@@ -122,7 +122,7 @@ public class GeneralJolieTests {
             "-l", "../../jolie-src/lib/dbus-java"
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        JolieThread server = new JolieThread(jpf+"/dbusserver.ol", args, "");
+        JolieThread server = new JolieThread(jpf+"/concurrency/server_single.ol", args);
         
         // Act 
         server.start();
@@ -144,7 +144,7 @@ public class GeneralJolieTests {
             "-l", "../../jolie-src/lib/dbus-java" 
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        JolieThread jt = new JolieThread(jpf+"/dbusserver.ol", args, "");
+        JolieThread jt = new JolieThread(jpf+"/dbusserver.ol", args);
         
         // Act 
         jt.start();

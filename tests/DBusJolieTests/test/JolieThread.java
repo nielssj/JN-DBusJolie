@@ -20,12 +20,11 @@ import static org.junit.Assert.assertEquals;
  */
 public class JolieThread extends Thread
 {
-    private String outputfile, output;
+    private String output;
     private String[] args;
 
-    public JolieThread(String sourcefile, String[] args, String outputfile)
+    public JolieThread(String sourcefile, String[] args)
     {
-        this.outputfile = outputfile;
         this.args = ArrayUtils.addAll(args, new String[] { sourcefile });
     }
 
@@ -42,9 +41,8 @@ public class JolieThread extends Thread
         }
 
         // Read output
-        try
+        /*try
         {
-           DataInputStream in = new DataInputStream(new FileInputStream(outputfile)); 
            BufferedReader br = new BufferedReader(new InputStreamReader(in));
            StringBuilder sb = new StringBuilder();
            String line;
@@ -54,13 +52,11 @@ public class JolieThread extends Thread
            }
            br.close();
            output = sb.toString();
-           
-           new File(outputfile).delete();
         }
         catch (IOException ex)
         {
             output = "";
-        }
+        }*/
     }
 
     public String getOutput()
