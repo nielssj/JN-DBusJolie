@@ -49,7 +49,6 @@ public class DBusListener extends CommListener implements Runnable
             { 
                 if(channel.checkInput())
                 {
-                    System.out.println("Scheduling message in CommCore");
                     interpreter().commCore().scheduleReceive(channel, port);
                 }
             }

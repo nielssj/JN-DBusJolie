@@ -569,7 +569,18 @@ public class OOITBuilder implements OLVisitor
 			} catch( IOException e ) {
 				error( n.context(), e );
 			}
-		} else if ( protocolFactory != null ) {
+		} else if ( n.location().getScheme().equals("dbus") ) {
+                        try {
+                               interpreter.commCore().addInputPort(
+					inputPort,
+					null,
+					protocolConfigurationSequence
+				); 
+				inputPorts.put( inputPort.name(), inputPort );
+                        } catch( IOException e ) {
+				error( n.context(), e );
+			}
+                } else if ( protocolFactory != null ) {
 			try {
 				interpreter.commCore().addInputPort(
 					inputPort,

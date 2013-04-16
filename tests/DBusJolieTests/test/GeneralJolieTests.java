@@ -70,22 +70,46 @@ public class GeneralJolieTests {
     public void clientServer() throws Exception {
         // Arrange
         String[] testArgs = new String[] { 
-            "-l", "../../jolie-src/extensions/sodep/dist/*",
-            "-l", "../../jolie-src/extensions/localsocket/dist/*",
-            "-l", "../../jolie-src/lib/libmatthew"
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java"
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
-        JolieSubProcess server = new JolieSubProcess(jpf+"/server.ol", args);
-        JolieSubProcess client = new JolieSubProcess(jpf+"/client.ol", args);
+        JolieSubProcess server = new JolieSubProcess(jpf+"/dbusserver.ol", args);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/dbusclient.ol", args);
         
         // Act 
         server.start();
         client.start();
         client.join();
-        server.join();
+        server.stop();
         
         // Assert
         assertEquals("10", client.getOutput());
+    }
+    
+    @Test
+    public void parallelClients() throws Exception {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieSubProcess server = new JolieSubProcess(jpf+"/dbusserver.ol", args);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/parallelclient.ol", args);
+        
+        // Act 
+        server.start();
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Assert
+        assertEquals("1014", client.getOutput());
     }
     
     @Test
@@ -115,9 +139,9 @@ public class GeneralJolieTests {
         String[] testArgs = new String[] { 
             "jolie-programs/NextPage.ol", 
             "-l", "../../jolie-src/extensions/dbus/dist/*", // Load D-Bus extension, 
-            "-l", "../../jolie-src/extensions/sodep/dist/*", // TODO: Figure how to make Jolie not require a protocol when using D-Bus (Until then we just reference sodep without using it)
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
             "-l", "../../jolie-src/lib/libmatthew",
-            "-l", "../../jolie-src/lib/dbus-java" // unix.jar/dbus.jar (TODO: D-Bus extension should reference this on its own?)
+            "-l", "../../jolie-src/lib/dbus-java" 
         };
         String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
         JolieThread jt = new JolieThread(jpf+"/dbusserver.ol", args, "");
