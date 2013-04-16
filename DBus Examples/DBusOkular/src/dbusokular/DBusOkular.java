@@ -1,6 +1,8 @@
 package dbusokular;
 
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
 import org.freedesktop.DBus;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
@@ -21,8 +23,8 @@ public class DBusOkular {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception  {
-        testAndExpose();
-        //talkToOkular();
+        //testAndExpose();
+        talkToOkular();
         //talkToTwiceService();
     }
     
@@ -32,14 +34,21 @@ public class DBusOkular {
             System.getenv("DBUS_SESSION_BUS_ADDRESS"));
         Transport conn = new Transport(address);
         
+        Date before = new Date();
         Message m = new MethodCall("org.freedesktop.DBus", "/",
         "org.freedesktop.DBus", "Hello", (byte) 0, null);
         conn.mout.writeMessage(m);
+        Date afterSend = new Date();
         MethodReturn response = (MethodReturn) conn.min.readMessage();
+        Date afterResp = new Date();
         System.out.println("My unique name is: "+response.getParameters()[0]);
-       
+        
+        System.out.printf("Compose and send:\t %d ms\n", (afterSend.getTime() - before.getTime()));
+        System.out.printf("Receive response:\t %d ms\n", (afterResp.getTime() - afterSend.getTime()));
+        System.out.printf("Total:\t\t\t %d ms\n", (afterResp.getTime() - before.getTime()));
+        
         // Talk to Okular
-        String okularInstance = "org.kde.okular-7526";
+        String okularInstance = "org.kde.okular-4672";
         
         // Open document in Okular
         m = new MethodCall(okularInstance, "/okular",
