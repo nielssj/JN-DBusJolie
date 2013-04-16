@@ -220,7 +220,9 @@ public class DBusCommChannel extends CommChannel {
     }
 
     protected void closeImpl() throws IOException {
-        // TODO: Implement?
+        if(!isInputPort) {
+           this.disconnect();
+        }
     }
 
     public void disconnect() throws IOException {

@@ -56,12 +56,6 @@ public class JolieSubProcess
             throw new RuntimeException("Join was interrupted", ex);
         }
         
-        // If failed, print error stream
-        if(exitValue != 0)
-        {
-            printErrorStream();
-        }
-        
         return exitValue;
     }
 
@@ -87,22 +81,25 @@ public class JolieSubProcess
         return sb.toString();
     }
     
-    private void printErrorStream()
+    public String getErrorStream()
     {
         DataInputStream in = new DataInputStream(process.getErrorStream()); 
         BufferedReader br = new BufferedReader(new InputStreamReader(in));
+        StringBuilder sb = new StringBuilder();
         String line;
 
         try
         {
             while((line = br.readLine()) != null)
             {
-                System.out.println(line);
+                sb.append(line);
             }
         }
         catch (IOException ex)
         {
             throw new RuntimeException("Process failed and wrapper failed to read ErrorStream", ex);
         }
+        
+        return sb.toString();
     }
 }
