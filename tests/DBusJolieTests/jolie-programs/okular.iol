@@ -3,7 +3,9 @@ type testtype:void {
 }
 
 type returnType:void {
+	.params[1, *]: undefined
 }
+
 
 interface Okular {
 	OneWay: 
@@ -25,6 +27,6 @@ interface Okular__shell {
 
 interface HelloServer {
 	RequestResponse:
-		test (testtype) (returnType),
+		test (int) (returnType),
 		intm (testtype) (int)
 }
