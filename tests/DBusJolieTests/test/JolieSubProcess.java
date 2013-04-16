@@ -70,6 +70,7 @@ public class JolieSubProcess
         {
             while((line = br.readLine()) != null)
             {
+              System.out.println(line);
                 sb.append(line);
             }
         }
@@ -92,6 +93,7 @@ public class JolieSubProcess
         {
             while((line = br.readLine()) != null)
             {
+              System.out.println(line);
                 sb.append(line);
             }
         }

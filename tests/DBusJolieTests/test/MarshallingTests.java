@@ -21,9 +21,7 @@ public class MarshallingTests {
         defaultArgs = new String[] {
             "-i", "../../jolie-src/include", 
             "-l", "../../jolie-src/javaServices/coreJavaServices/dist/coreJavaServices.jar",
-            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar",
-            "-l", "../../jolie-src/lib/xsom/dist",
-            "-l", "../../jolie-src/lib/jolie-xml/dist" 
+            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar"
         };
     }
     
@@ -38,10 +36,9 @@ public class MarshallingTests {
     }
     
     @Test
-    public void simpleType() throws Exception {
+    public void simpleTypeTest() throws Exception {
         // Arrange
         String[] testArgs = new String[] { 
-            "-l", "../../jolie-src/extensions/sodep/dist/*", 
             "-l", "../../jolie-src/extensions/dbus/dist/*",
             "-l", "../../jolie-src/lib/libmatthew",
             "-l", "../../jolie-src/lib/dbus-java"
@@ -57,6 +54,31 @@ public class MarshallingTests {
         server.stop();
         
         // Assert
+        
         assertEquals("PassedPassedPassed", client.getOutput());
+    }
+    
+    @Test
+    public void paramsTest() throws Exception {
+        // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieSubProcess server = new JolieSubProcess(jpf+"/marshalling/paramsServer.ol", args);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/marshalling/paramsClient.ol", args);
+        
+        // Act 
+        server.start();
+        client.start();
+        client.join();
+                
+        // Assert
+        assertEquals("PassedPassedPassedPassedPassedPassed", server.getOutput());
+        assertEquals("PassedPassedPassedPassedPassedPassed", client.getOutput());
+          
+        server.stop();
     }
 }

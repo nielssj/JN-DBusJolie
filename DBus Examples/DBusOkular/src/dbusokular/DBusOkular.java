@@ -1,9 +1,7 @@
 package dbusokular;
 
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import org.freedesktop.DBus;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
@@ -12,7 +10,6 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.MethodReturn;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.UInt32;
-import org.freedesktop.dbus.exceptions.DBusExecutionException;
 
 /**
  *
@@ -24,8 +21,8 @@ public class DBusOkular {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception  {
-        //testAndExpose();
-        talkToOkular();
+        testAndExpose();
+        //talkToOkular();
         //talkToTwiceService();
     }
     

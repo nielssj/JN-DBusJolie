@@ -49,6 +49,7 @@ public class DBusCommChannelFactory extends CommChannelFactory
     DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, true);
     
     boolean nameObtained = channel.obtainName(connectionName);   
+    if (!nameObtained) throw new RuntimeException("Could not obtain name "+connectionName+" because it was already in use");
     
     return channel;
   }

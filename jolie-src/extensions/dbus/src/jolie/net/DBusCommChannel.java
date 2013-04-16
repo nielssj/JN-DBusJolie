@@ -71,7 +71,7 @@ public class DBusCommChannel extends CommChannel {
 
             if (m instanceof MethodReturn) {
                 UInt32 ret = (UInt32) m.getParameters()[0];
-
+                
                 if (ret.intValue() == 1) {
                     return true;
                 }

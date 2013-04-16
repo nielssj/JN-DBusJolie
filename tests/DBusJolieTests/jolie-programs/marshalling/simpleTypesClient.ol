@@ -2,7 +2,7 @@ include "simpleTypesInterface.iol"
 include "console.iol"
 
 outputPort SimpleTypesServer {
-	Location: "dbus:/org.testname:/"
+	Location: "dbus:/org.testname:/object"
 	Interfaces: SimpleTypes
 }
 

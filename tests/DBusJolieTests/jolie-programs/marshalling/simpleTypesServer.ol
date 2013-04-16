@@ -1,22 +1,21 @@
 include "simpleTypesInterface.iol"
 
 inputPort SimpleTypesServer {
-	Location: "dbus:/org.testname:/"
+	Location: "dbus:/org.testname:/object"
 	Interfaces: SimpleTypes
 }
-
 
 execution { concurrent }
 
 main
 {
-	getInt ( ) ( response ) {
+	[ getInt ( ) ( response )  {
 		response = 42
-	},
-	getBool ( ) ( response ) {
+	} ] {nullProcess}
+	[ getBool ( ) ( response )  {
 		response = true
-	},
-	getString ( ) ( response ) {
+	} ] {nullProcess}
+	[ getString ( ) ( response ) {
 		response = "John Doe"
-	}
+	} ] {nullProcess}
 }
