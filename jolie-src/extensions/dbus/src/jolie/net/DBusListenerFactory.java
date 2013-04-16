@@ -7,7 +7,7 @@ import jolie.net.ext.CommProtocolFactory;
 import jolie.net.ports.InputPort;
 import jolie.runtime.AndJarDeps;
 
-@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar", "debug-enable-1.1.jar"})
+@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusListenerFactory extends CommListenerFactory
 {
 	public DBusListenerFactory( CommCore commCore )
