@@ -4,6 +4,7 @@
  */
 package jolie.net;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +13,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jolie.runtime.Value;
@@ -30,6 +30,7 @@ import org.freedesktop.dbus.types.DBusMapType;
  * @author niels
  */
 public class DBusMarshalling {
+
   private static boolean TRACE = false;
 
   private static Type getType(Value value) {
@@ -167,8 +168,12 @@ public class DBusMarshalling {
       return DBusMarshalling.specialTypeToJolieValue(val, t);
     }
 
-    if (TRACE) System.out.println("singleDBusToJolie got type " + t);
-    if (TRACE) System.out.println("singleDBusToJolie got val " + val);
+    if (TRACE) {
+      System.out.println("singleDBusToJolie got type " + t);
+    }
+    if (TRACE) {
+      System.out.println("singleDBusToJolie got val " + val);
+    }
 
     if (t.equals(Short.class)) {
       return Value.create(((Short) val).intValue());
@@ -199,7 +204,7 @@ public class DBusMarshalling {
   }
 
   private static boolean specialType(Type t) {
-    return t instanceof DBusMapType || t instanceof Vector || t instanceof DBusListType;
+    return t instanceof DBusMapType || t instanceof DBusListType;
   }
 
   private static Value DBusMapToJolie(Map m, DBusMapType t) {
@@ -226,47 +231,14 @@ public class DBusMarshalling {
   private static ValueVector DBusListToJolie(Object o, DBusListType t) {
     Type valType = t.getActualTypeArguments()[0];
     ValueVector v = ValueVector.create();
-    Iterable it;
 
-    if (o instanceof Iterable) {
-      it = (Iterable) o;
-
-      for (Object obj : it) {
+    if (o instanceof Iterable) { // Array of wrapper types 
+      for (Object obj : (Iterable) o) {
         v.add(DBusMarshalling.singleDBusToJolie(obj, valType));
       }
-    } else {
-      if (valType.equals(Integer.class)) {
-        int[] arr = (int[]) o;
-
-        for (int i : arr) {
-          v.add(DBusMarshalling.singleDBusToJolie(i, valType));
-        }
-      } else if (valType.equals(Long.class)) {
-        long[] arr = (long[]) o;
-
-        for (long l : arr) {
-          v.add(DBusMarshalling.singleDBusToJolie(l, valType));
-        }
-      } else if (valType.equals(Byte.class)) {
-        byte[] arr = (byte[]) o;
-
-        for (byte b : arr) {
-          v.add(DBusMarshalling.singleDBusToJolie(b, valType));
-        }
-      } else if (valType.equals(Double.class)) {
-        double[] arr = (double[]) o;
-
-        for (double d : arr) {
-          v.add(DBusMarshalling.singleDBusToJolie(d, valType));
-        }
-      } else if (valType.equals(Boolean.class)) {
-        boolean[] arr = (boolean[]) o;
-
-        for (boolean b : arr) {
-          v.add(DBusMarshalling.singleDBusToJolie(b, valType));
-        }
-      } else {
-        throw new RuntimeException("Unrecognized array of simple type: " + valType);
+    } else { // Array of primitive types
+      for (int i = 0 ; i < Array.getLength(o) ; i++) {
+        v.add(DBusMarshalling.singleDBusToJolie(Array.get(o, i), valType));
       }
     }
 
@@ -299,7 +271,9 @@ public class DBusMarshalling {
         Logger.getLogger(DBusMarshalling.class.getName()).log(Level.SEVERE, null, ex);
       }
 
-      if (TRACE) System.out.println("ToJolieValue got types: " + Arrays.deepToString(types.toArray()));
+      if (TRACE) {
+        System.out.println("ToJolieValue got types: " + Arrays.deepToString(types.toArray()));
+      }
 
       if (types.size() == 1 && !DBusMarshalling.specialType(types.get(0))) {
         return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));

@@ -48,8 +48,6 @@ main
 	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
 
 	goToPage@Okular( 10 );*/
-	currentPage@Okular( ) ( response );
-	println@Console( "currentPage is " + response )()
 	/*currentDocument@Okular( ) ( response2 );
 	println@Console( "currentDocument is " + response2 )();
 
