@@ -1,20 +1,13 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package jolie.net;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
 import org.freedesktop.dbus.Marshalling;
@@ -30,9 +23,6 @@ import org.freedesktop.dbus.types.DBusMapType;
  * @author niels
  */
 public class DBusMarshalling {
-
-  private static boolean TRACE = false;
-
   private static Type getType(Value value) {
     Map<String, ValueVector> children = value.children();
 
@@ -82,6 +72,11 @@ public class DBusMarshalling {
     }
   }
 
+  /*
+   * Check if two types match. First checks if two types are equal, and if they are not,
+   * a check is made to see whether the types are either DBusMapType or DBusListType, and
+   * if they are a check is made to see whether the type of their values are the same.
+   */
   private static Boolean typesMatch(Type t1, Type t2) {
     if (t1 == t2) {
       return true;
@@ -148,7 +143,7 @@ public class DBusMarshalling {
     }
   }
 
-  public static Object valueVectorToDBus(ValueVector vector) throws DBusException {
+  private static Object valueVectorToDBus(ValueVector vector) throws DBusException {
     if (vector.size() > 1) {
       ArrayList<Object> objects = new ArrayList<Object>();
 
@@ -162,20 +157,10 @@ public class DBusMarshalling {
     }
   }
 
-  public static Value singleDBusToJolie(Object val, Type t) {
-    // TODO support more types
+  private static Value singleDBusToJolie(Object val, Type t) {
     if (DBusMarshalling.specialType(t)) {
       return DBusMarshalling.specialTypeToJolieValue(val, t);
-    }
-
-    if (TRACE) {
-      System.out.println("singleDBusToJolie got type " + t);
-    }
-    if (TRACE) {
-      System.out.println("singleDBusToJolie got val " + val);
-    }
-
-    if (t.equals(Short.class)) {
+    } else if (t.equals(Short.class)) {
       return Value.create(((Short) val).intValue());
     } else if (t.equals(Integer.class)) {
       return Value.create((Integer) val);
@@ -214,7 +199,7 @@ public class DBusMarshalling {
 
     for (Iterator it = m.entrySet().iterator(); it.hasNext();) {
       Entry e = (Entry) it.next();
-      ValueVector v = null;
+      ValueVector v;
 
       if (valType instanceof DBusListType) {
         v = DBusMarshalling.DBusListToJolie((Iterable) e.getValue(), (DBusListType) valType);
@@ -237,7 +222,7 @@ public class DBusMarshalling {
         v.add(DBusMarshalling.singleDBusToJolie(obj, valType));
       }
     } else { // Array of primitive types
-      for (int i = 0 ; i < Array.getLength(o) ; i++) {
+      for (int i = 0; i < Array.getLength(o); i++) {
         v.add(DBusMarshalling.singleDBusToJolie(Array.get(o, i), valType));
       }
     }
@@ -260,20 +245,19 @@ public class DBusMarshalling {
     return null;
   }
 
-  public static Value ToJolieValue(Object[] val, String signature) {
+  /*
+   * Given an array óf objects and a DBus signature string, convert it to a Jolie Value.
+   * If the array of objects is null or empty, returns an undefined value.
+   * If the signature has a single type, return the value found at val[0] as a Jolie value
+   * If the signature has multiple types, return them as a Jolie value with a single child
+   * named `params` which is an array. 
+   */
+  public static Value ToJolieValue(Object[] val, String signature) throws DBusException {
     if (val == null || val.length == 0) {
       return Value.UNDEFINED_VALUE;
     } else {
       List<Type> types = new ArrayList<Type>();
-      try {
-        Marshalling.getJavaType(signature, types, -1);
-      } catch (DBusException ex) {
-        Logger.getLogger(DBusMarshalling.class.getName()).log(Level.SEVERE, null, ex);
-      }
-
-      if (TRACE) {
-        System.out.println("ToJolieValue got types: " + Arrays.deepToString(types.toArray()));
-      }
+      Marshalling.getJavaType(signature, types, -1);
 
       if (types.size() == 1 && !DBusMarshalling.specialType(types.get(0))) {
         return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));

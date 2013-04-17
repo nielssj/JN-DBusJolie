@@ -36,6 +36,10 @@ public class MarshallingTests {
     }
     
     @Test
+    /*
+     * Checks for handling of simple types. The client calls a method on the server,
+     * and checks that it gets the right return value.
+     */
     public void simpleTypeTest() throws Exception {
         // Arrange
         String[] testArgs = new String[] { 
@@ -59,6 +63,11 @@ public class MarshallingTests {
     }
     
     @Test
+    /*
+     * Check that everything given to `.params` is handled correctly. Sends an object containing simple types,
+     * a map type and and array type to the server, which checks that everything is correct. The server then sends
+     * the request back to the client, which checks that it is still correct.
+     */
     public void paramsTest() throws Exception {
         // Arrange
         String[] testArgs = new String[] { 
@@ -80,5 +89,28 @@ public class MarshallingTests {
         assertEquals("PassedPassedPassedPassedPassedPassed", client.getOutput());
           
         server.stop();
+    }
+    
+    @Test
+    /*
+     * Tries to send an map with values of several types. Check that an exception is thrown,
+     * since D-Bus does not support maps with values of differing types
+     */
+    public void mapTest() throws Exception {
+              // Arrange
+        String[] testArgs = new String[] { 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java"
+        };
+        String[] args = ArrayUtils.addAll(testArgs, defaultArgs);
+        JolieSubProcess client = new JolieSubProcess(jpf+"/marshalling/mapClient.ol", args);
+        
+        // Act 
+        client.start();
+        client.join();
+                
+        // Assert
+        assertTrue(client.getErrorStream().indexOf("DBus maps does not support several types.") != -1);
     }
 }
