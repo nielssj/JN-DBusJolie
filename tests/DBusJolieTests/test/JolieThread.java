@@ -25,7 +25,16 @@ public class JolieThread extends Thread
 
     public JolieThread(String sourcefile, String[] args)
     {
-        this.args = ArrayUtils.addAll(args, new String[] { sourcefile });
+        String[] sargs;
+        
+        String[] pargs = sourcefile.split(" ");
+        if(pargs.length > 1) {
+            sargs = pargs;
+        } else {
+            sargs = new String[] { sourcefile };
+        }
+        
+        this.args = ArrayUtils.addAll(args, sargs);
     }
 
     @Override

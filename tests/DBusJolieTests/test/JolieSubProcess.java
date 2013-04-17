@@ -21,7 +21,13 @@ public class JolieSubProcess
 
     public JolieSubProcess(String sourcefile, String[] args)
     {
-        args = ArrayUtils.add(args, sourcefile);
+        String[] pargs = sourcefile.split(" ");
+        if(pargs.length > 1) {
+            args = ArrayUtils.addAll(args, pargs);
+        } else {
+            args = ArrayUtils.add(args, sourcefile);
+        }
+        
         this.args = ArrayUtils.addAll(env, args);
     }
 

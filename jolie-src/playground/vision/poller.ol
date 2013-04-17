@@ -50,7 +50,7 @@ main
 		if ( currentPage != oldCurrentPage ) {
 			oldCurrentPage = currentPage;
 			undef( request );
-			request.pageNumber = int( currentPage );
+			request.pageNumber = currentPage;
 			request.local = 1;
 			goToPage@Presenter( request )
 		};

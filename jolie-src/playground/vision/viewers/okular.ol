@@ -26,12 +26,18 @@ include "runtime.iol"
 include "string_utils.iol"
 include "viewer.iol"
 include "ui/swing_ui.iol"
+include "okular-dbus.iol"
 
 execution { sequential }
 
 inputPort ViewerInputPort {
 Location: "local"
 Interfaces: ViewerInterface
+}
+
+outputPort OkularInstance {
+	Location: "dbus:/org.kde.okular-8000:/okular"
+	Interfaces: OkularDBusInterface
 }
 
 include "presenter.iol"
@@ -87,7 +93,8 @@ define initDocumentViewer
 	};
 	selected--;
 
-	cmdStr = "qdbus " + ss.result[selected] + " "
+	cmdStr = "qdbus " + ss.result[selected] + " ";
+	OkularInstance.location = "dbus:/" + ss.result[selected] + ":/okular"
 }
 
 init
@@ -106,11 +113,11 @@ init
 main
 {
 	[ goToPage( request ) ] {
-		exec@Exec( cmdStr + "/okular goToPage " + request.pageNumber )()
+		goToPage@OkularInstance ( request.pageNumber )
 	}
 
 	[ openDocument( request ) ] {
-		exec@Exec( cmdStr + "/okular openDocument " + request.documentUrl )()
+		openDocument@OkularInstance ( request.documentUrl )
 	}
 
 	[ close( request ) ] {
@@ -118,13 +125,12 @@ main
 	}
 
 	[ currentPage()( response ) {
-		exec@Exec( cmdStr + "/okular currentPage" )( r );
-		response = r;
-		trim@StringUtils( response )( response )
+		currentPage@OkularInstance ( ) ( r );
+		response = r
 	} ] { nullProcess }
 
 	[ currentDocument()( response ) {
-		exec@Exec( cmdStr + "/okular currentDocument" )( r );
+		currentDocument@OkularInstance ( ) ( r );
 		response = r;
 		trim@StringUtils( response )( response )
 	} ] { nullProcess }
