@@ -20,7 +20,7 @@
  ***************************************************************************/
 
 type GoToPageMessage:void {
-	.pageNumber:int
+	.pageNumber:long
 	.local?:int  // 1 if sent from the local Viewer, 0 or undefined otherwise
 }
 
