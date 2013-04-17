@@ -27,6 +27,7 @@ include "string_utils.iol"
 include "viewer.iol"
 include "ui/swing_ui.iol"
 include "okular-dbus.iol"
+include "dbus.iol"
 
 execution { sequential }
 
@@ -38,6 +39,11 @@ Interfaces: ViewerInterface
 outputPort OkularInstance {
 	Location: "dbus:/org.kde.okular-8000:/okular"
 	Interfaces: OkularDBusInterface
+}
+
+outputPort DBus {
+	Location: "dbus:/org.freedesktop.DBus:/"
+	Interfaces: DBusInterface
 }
 
 include "presenter.iol"
@@ -57,15 +63,18 @@ define startPoller
 
 define initDocumentViewer
 {
-	exec@Exec( "qdbus org.kde.okular*" )( cmdResult );
-	if ( !is_string( cmdResult ) ) {
-		throw( ViewerFault, "Could not query Okular" )
-	} else {
-		cmdStr = cmdResult
+	o = 0;
+	ListNames@DBus ( ) ( names );
+	for (i = 0, i < #names.params, i++)
+	{
+		name = names.params[i];
+		name.prefix = "org.kde.okular-";
+		startsWith@StringUtils ( name ) ( swres );
+		if ( swres ) {
+		    ss.result[o++] = name
+		}
 	};
-	trim@StringUtils( cmdStr )( cmdStr );
-	cmdStr.regex = "\n";
-	split@StringUtils( cmdStr )( ss );
+	
 	if ( #ss.result < 1 ) {
 		throw( CouldNotStartFault, "Could not find a running viewer" )
 	};
@@ -73,15 +82,15 @@ define initDocumentViewer
 	if ( #ss.result > 1 ) {
 		range = " (1.." + (#ss.result) + ")"
 	};
+	
 	choiceText = "Choose a viewer instance" + range;
-	// println@Console( "Choose a viewer instance" + range )();
 	for( i = 0, i < #ss.result, i++ ) {
 		// We display numbers starting by 1
-		exec@Exec( "qdbus " + ss.result[i] + " /okular currentDocument" )( cDoc );
+		OkularInstance.location = "dbus:/" + ss.result[i] + ":/okular";
+		currentDocument@OkularInstance ( ) ( cDoc );
 		doc = cDoc;
 		trim@StringUtils( doc )( doc );
 		choiceText += "\n" + (i+1) + ") " + ss.result[i] + " - Currently displaying: " + doc
-		// println@Console( (i+1) + ") " + ss.result[i] + " - Currently displaying: " + doc )()
 	};
 	selected = -1;
 	// registerForInput@Console()();
