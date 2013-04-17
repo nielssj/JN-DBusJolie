@@ -10,6 +10,7 @@ package jolie.net;
 
 import jolie.net.ports.OutputPort;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.text.ParseException;
 import jolie.net.ext.CommChannelFactory;
@@ -21,11 +22,17 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-@AndJarDeps({"unix.jar", "dbus-2.7.jar"})
+@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusCommChannelFactory extends CommChannelFactory {
 
-  public DBusCommChannelFactory(CommCore commCore) {
+  public DBusCommChannelFactory(CommCore commCore) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super(commCore);
+    
+    System.setProperty( "java.library.path", "/usr/local/lib/jni" );
+ 
+Field fieldSysPath = ClassLoader.class.getDeclaredField( "sys_paths" );
+fieldSysPath.setAccessible( true );
+fieldSysPath.set( null, null );
   }
 
   public static DBusCommChannel createChannel(URI location, InputPort port) throws DBusException, IOException {

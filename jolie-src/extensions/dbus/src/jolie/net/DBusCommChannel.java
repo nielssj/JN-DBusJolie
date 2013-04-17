@@ -56,7 +56,7 @@ public class DBusCommChannel extends CommChannel {
 
   // Constructor: Save details and instantiate collections
   public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort)
-          throws IOException, ParseException, DBusException, ParserConfigurationException, SAXException {
+          throws IOException, ParseException, DBusException, ParserConfigurationException, SAXException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super();
 
     this.transport = transport;
