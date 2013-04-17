@@ -32,7 +32,7 @@ main
 	if (response.params[2].field1 == true) {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 2 field1 passing failed, got " + response.params[2].field1 )()
+		println@Console( "Test for params 2 field1 passing failed, got " + response.params[2].fibeld1 )()
 	};
 
 	if (response.params[2].field2 == false) {

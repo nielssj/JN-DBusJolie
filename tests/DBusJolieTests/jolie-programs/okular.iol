@@ -9,24 +9,11 @@ type returnType:void {
 
 interface Okular {
 	OneWay: 
-		slotNextPage( void ),
-		goToPage( int ),
-		openDocument( string ),
-		testmethod (int),
-		testmethod2 ( testtype ) 
+		goToPage( long ),
+		openDocument( string )
 	RequestResponse: 
-		currentPage ( void ) ( int ),
+		slotNextPage( void ) ( void ),
+		
+		currentPage ( void ) ( long ),
 		currentDocument ( void ) ( string )
-
-}
-
-interface Okular__shell {
-	RequestResponse: 
-		close ( void )( bool )
-}
-
-interface HelloServer {
-	RequestResponse:
-		test (int) (returnType),
-		intm (testtype) (int)
 }

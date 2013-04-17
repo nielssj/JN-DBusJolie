@@ -8,15 +8,20 @@
  */
 package jolie.net;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringBufferInputStream;
 import java.net.URI;
 import java.text.ParseException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
 import jolie.Interpreter;
 import jolie.net.ports.OutputPort;
 import jolie.runtime.FaultException;
 import jolie.runtime.Value;
+
 import org.freedesktop.dbus.Message;
 import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.MethodReturn;
@@ -24,6 +29,15 @@ import org.freedesktop.dbus.Error;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.UInt32;
 import org.freedesktop.dbus.exceptions.DBusException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 public class DBusCommChannel extends CommChannel {
 
@@ -39,10 +53,11 @@ public class DBusCommChannel extends CommChannel {
   // Messages being executed or waiting to be, indexed by D-Bus serial
   ConcurrentHashMap<Long, Message> messages;
   ConcurrentHashMap<Long, Message> sentMessages;
+  ConcurrentHashMap<String, String> introspectionData = null;
 
   // Constructor: Save details and instantiate collections
   public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort)
-          throws IOException, ParseException, DBusException {
+          throws IOException, ParseException, DBusException, ParserConfigurationException, SAXException {
     super();
 
     this.transport = transport;
@@ -51,7 +66,57 @@ public class DBusCommChannel extends CommChannel {
     this.inputQueue = new ConcurrentLinkedQueue<Long>();
     this.messages = new ConcurrentHashMap<Long, Message>();
     this.sentMessages = new ConcurrentHashMap<Long, Message>();
+
     this.isInputPort = isInputPort;
+
+    if (!this.isInputPort) {
+      this.introspectionData = new ConcurrentHashMap<String, String>();
+
+      MethodCall m = new MethodCall(
+              this.connectionName,
+              this.objectPath,
+              null,
+              "Introspect",
+              (byte) 0,
+              "");
+
+      this.transport.mout.writeMessage(m);
+      Message retOrErr = this.checkInputSpecific(m.getSerial());
+      if (retOrErr instanceof MethodReturn) {
+        MethodReturn ret = (MethodReturn) retOrErr;
+        String xml = (String) ret.getParameters()[0];
+
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder b = factory.newDocumentBuilder();
+
+        InputStream is = new StringBufferInputStream(xml);
+        Document d = b.parse(is);
+        NodeList methods = d.getElementsByTagName("method");
+
+        for (int i = 0; i < methods.getLength(); i++) {
+          Node method = methods.item(i);
+
+          String name = method.getAttributes().getNamedItem("name").getNodeValue();
+          String signature = "";
+
+          NodeList children = method.getChildNodes();
+          for (int j = 0; j < children.getLength(); j++) {
+            Node child = children.item(j);
+
+            if (child.getNodeName().equals("arg")) {
+              NamedNodeMap attributes = child.getAttributes();
+              Node direction = attributes.getNamedItem("direction");
+
+              if (direction.getNodeValue().equals("in")) {
+                signature += attributes.getNamedItem("type").getNodeValue();
+              }
+            }
+          }
+
+          this.introspectionData.put(name, signature);
+        }
+      }
+    }
 
     if (TRACE) {
       System.out.printf("CommChannel init - ConnectionName: %s \n", this.connectionName);
@@ -118,6 +183,9 @@ public class DBusCommChannel extends CommChannel {
     }
   }
 
+  private void introspect() {
+  }
+
   // Send message: Calls and returns (OutputPort/InputPort)
   protected void sendImpl(CommMessage message) throws IOException {
     if (TRACE) {
@@ -134,6 +202,7 @@ public class DBusCommChannel extends CommChannel {
     try {
       Object[] values = DBusMarshalling.valuesToDBus(message.value(), builder);
       String typeString = builder.toString();
+
       if (TRACE) {
         System.out.printf("sendimpl - Typestring: %s \n", typeString);
       }
@@ -151,6 +220,11 @@ public class DBusCommChannel extends CommChannel {
         }
       } else {
         // Outgoing method call (OutputPort)
+
+        if (this.introspectionData != null) {
+          typeString = this.introspectionData.get(message.operationName());
+        }
+
         m = new MethodCall(
                 this.connectionName,
                 this.objectPath,

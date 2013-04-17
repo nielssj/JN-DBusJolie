@@ -121,8 +121,10 @@ public class DBusMarshalling {
     }
 
     typeString = Marshalling.getDBusType(types.toArray(new Type[types.size()]));
+    
     builder.append(typeString);
-    return Marshalling.convertParameters(objects.toArray(), types.toArray(new Type[types.size()]), null);
+    return objects.toArray();
+    //return Marshalling.convertParameters(objects.toArray(), types.toArray(new Type[types.size()]), null);
   }
 
   private static Object valueToDBus(Value value) throws DBusException {

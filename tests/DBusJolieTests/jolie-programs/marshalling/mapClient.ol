@@ -1,4 +1,3 @@
-include "paramsInterface.iol"
 include "console.iol"
 
 type dbustype:void {
