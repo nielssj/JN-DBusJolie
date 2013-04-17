@@ -8,10 +8,9 @@
  */
 package jolie.net;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringBufferInputStream;
 import java.net.URI;
 import java.text.ParseException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,7 +88,7 @@ public class DBusCommChannel extends CommChannel {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder b = factory.newDocumentBuilder();
 
-        InputStream is = new StringBufferInputStream(xml);
+        InputStream is = new ByteArrayInputStream(xml.getBytes());
         Document d = b.parse(is);
         NodeList methods = d.getElementsByTagName("method");
 
@@ -105,9 +104,8 @@ public class DBusCommChannel extends CommChannel {
 
             if (child.getNodeName().equals("arg")) {
               NamedNodeMap attributes = child.getAttributes();
-              Node direction = attributes.getNamedItem("direction");
 
-              if (direction.getNodeValue().equals("in")) {
+              if (attributes.getNamedItem("direction").getNodeValue().equals("in")) {
                 signature += attributes.getNamedItem("type").getNodeValue();
               }
             }
@@ -183,9 +181,6 @@ public class DBusCommChannel extends CommChannel {
     }
   }
 
-  private void introspect() {
-  }
-
   // Send message: Calls and returns (OutputPort/InputPort)
   protected void sendImpl(CommMessage message) throws IOException {
     if (TRACE) {
@@ -220,7 +215,6 @@ public class DBusCommChannel extends CommChannel {
         }
       } else {
         // Outgoing method call (OutputPort)
-
         if (this.introspectionData != null) {
           typeString = this.introspectionData.get(message.operationName());
         }

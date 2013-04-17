@@ -328,6 +328,7 @@ java -cp $JOLIE_HOME/jolie.jar:$JOLIE_HOME/lib/libjolie.jar:$JOLIE_HOME/tools/jo
 		<copy file="${libs.javamail.smtp}" tofile="dist/lib/smtp.jar"/>
 		<copy file="${libs.javamail.mailapi}" tofile="dist/lib/mailapi.jar"/>
 		<copy file="${libs.libmatthew.unix}" tofile="dist/lib/unix.jar"/>
+		<copy file="${libs.dbus}" tofile="dist/lib/dbus-2.7.jar"/>
 		<copy file="${libs.relaxngDatatype}" tofile="dist/lib/relaxngDatatype.jar"/>
 		<copy file="${libs.ini4j}" tofile="dist/lib/ini4j.jar"/>
 		<copy file="${libs.json}" tofile="dist/lib/json_simple.jar"/>
