@@ -11,8 +11,10 @@ package jolie.net;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URI;
 import java.text.ParseException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -32,7 +34,16 @@ import org.freedesktop.dbus.exceptions.DBusException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import jolie.net.ports.Interface;
+import jolie.runtime.typing.RequestResponseTypeDescription;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -74,8 +85,6 @@ public class DBusCommChannel extends CommChannel {
         // Retreive or prepare introspection data (Output/Input)
         if (!this.isInputPort) {
             this.IntrospectInput();
-        } else {
-            this.IntrospectOutput();
         }
 
         if (TRACE) {
@@ -132,7 +141,61 @@ public class DBusCommChannel extends CommChannel {
         }
     }
 
-    private void IntrospectOutput() throws DBusException, IOException, ParserConfigurationException, SAXException {
+    public void setIntrospectOutput(Interface iface) {
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.newDocument();
+
+            // Create root element with object path
+            Element elmRoot = doc.createElement("node");
+            elmRoot.setAttribute("name", this.objectPath);
+            doc.appendChild(elmRoot);
+
+            // Create interface element
+            Element elmInterface = doc.createElement("interface");
+            elmInterface.setAttribute("name", "le.interface"); // TODO: Make this use the actual interface name
+            elmRoot.appendChild(elmInterface);
+
+            // Create method elements
+            Map<String, RequestResponseTypeDescription> rros = iface.requestResponseOperations();
+            for (String rroName : rros.keySet()) {
+                RequestResponseTypeDescription rroDesc = rros.get(rroName);
+
+                // Method root element
+                Element elmMethod = doc.createElement("method");
+                elmMethod.setAttribute("name", rroName);
+                elmRoot.appendChild(elmMethod);
+
+                // Request arg
+                Element elmArg = doc.createElement("arg");
+                elmArg.setAttribute("name", "request");
+                elmArg.setAttribute("type", rroDesc.requestType().toString()); // TODO: Make mapping of this to D-Bus type string
+                elmArg.setAttribute("direction", "in");
+                elmMethod.appendChild(elmArg);
+
+                // Response arg
+                elmArg = doc.createElement("arg");
+                elmArg.setAttribute("name", "response");
+                elmArg.setAttribute("type", rroDesc.responseType().toString()); // TODO: Make mapping of this to D-Bus type string
+                elmArg.setAttribute("direction", "out");
+                elmMethod.appendChild(elmArg);
+            }
+
+            TransformerFactory tff = TransformerFactory.newInstance();
+            Transformer tf = tff.newTransformer();
+            StringWriter sw = new StringWriter();
+            tf.transform(new DOMSource(doc), new StreamResult(sw));
+
+            this.introspectionString = sw.getBuffer().toString();
+            
+            if (TRACE) {
+                System.out.println("Introspection string: " + this.introspectionString);
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to create introspection string", ex);
+            // Log warning instead?
+        }
     }
 
     // Attempt to reserve a name in DBus daemon
