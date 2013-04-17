@@ -48,7 +48,9 @@ public class VisionTests {
     @Test
     public void clientOkular() throws Exception {
         // Arrange
-        JolieThread  client = new JolieThread(jpf+"presenter.ol okular socket://localhost:1337", defaultArgs);
+        String clientLocation = "Location_Presenter=\"socket://130.226.141.178:1337\"";
+        String[] clientArgs = ArrayUtils.addAll(defaultArgs, new String[] { "-C", clientLocation });
+        JolieThread  client = new JolieThread(jpf+"presenter.ol okular socket://130.226.141.189:1337", clientArgs);
         
         // Act 
         client.start();

@@ -1,7 +1,14 @@
 package dbusokular;
 
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Date;
+import javax.xml.parsers.*;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.w3c.dom.*;
 import org.freedesktop.DBus;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.DBusSignal;
@@ -21,9 +28,39 @@ public class DBusOkular {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws Exception  {
-        testAndExpose();
+        //testAndExpose();
         //talkToOkular();
         //talkToTwiceService();
+        buildIntrospect();
+    }
+    
+    public static void buildIntrospect() throws Exception {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        Document doc = db.newDocument();
+        
+        Element elmRoot = doc.createElement("node");
+        elmRoot.setAttribute("name", "/object");
+        doc.appendChild(elmRoot);
+        
+        Element elmMethod = doc.createElement("method");
+        elmMethod.setAttribute("name", "goToPage");
+        elmRoot.appendChild(elmMethod);
+        
+        Element elmArg = doc.createElement("arg");
+        elmArg.setAttribute("name", "request");
+        elmArg.setAttribute("type", "i");
+        elmArg.setAttribute("direction", "in");
+        elmMethod.appendChild(elmArg);
+        
+        TransformerFactory tff = TransformerFactory.newInstance();
+        Transformer tf = tff.newTransformer();
+        StringWriter sw = new StringWriter();
+        tf.transform(new DOMSource(doc), new StreamResult(sw));
+        
+        String output = sw.getBuffer().toString();
+        
+        System.out.println(output);
     }
     
     public static void talkToOkular() throws Exception {
