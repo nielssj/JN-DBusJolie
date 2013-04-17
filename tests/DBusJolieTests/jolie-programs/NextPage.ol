@@ -2,7 +2,7 @@ include "okular.iol"
 include "console.iol"
 
 outputPort Okular {
-	Location: "dbus:/org.kde.okular-3257:/okular"
+	Location: "dbus:/org.kde.okular-5253:/okular"
 	Interfaces: Okular
 }
 

@@ -21,7 +21,7 @@ import org.freedesktop.dbus.MethodCall;
 import org.freedesktop.dbus.Transport;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-@AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
+@AndJarDeps({"unix.jar", "dbus-2.7.jar"})
 public class DBusCommChannelFactory extends CommChannelFactory {
 
   public DBusCommChannelFactory(CommCore commCore) {
