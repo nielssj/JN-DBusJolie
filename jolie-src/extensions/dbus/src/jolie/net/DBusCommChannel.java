@@ -138,6 +138,7 @@ public class DBusCommChannel extends CommChannel {
                         }
                     }
                 }
+                this.introspectedInterface.put(name, signature);
             }
         }
     }
