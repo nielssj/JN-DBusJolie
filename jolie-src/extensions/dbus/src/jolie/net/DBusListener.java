@@ -36,7 +36,7 @@ public class DBusListener extends CommListener implements Runnable {
     // Start listening for method calls till shutdown is called
     try {
       while (true) {
-        if (channel.checkInput()) {
+        if (channel.listen()) {
           interpreter().commCore().scheduleReceive(channel, port);
         }
       }

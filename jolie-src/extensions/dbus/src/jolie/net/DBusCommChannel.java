@@ -41,6 +41,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import jolie.net.ports.Interface;
+import jolie.runtime.typing.OneWayTypeDescription;
 import jolie.runtime.typing.RequestResponseTypeDescription;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -63,9 +64,9 @@ public class DBusCommChannel extends CommChannel {
     // Messages being executed or waiting to be, indexed by D-Bus serial
     ConcurrentHashMap<Long, Message> messages;
     ConcurrentHashMap<Long, Message> sentMessages;
-// InputPort interface retrieved with introspection
+    // InputPort interface retrieved with introspection
     ConcurrentHashMap<String, String> introspectedInterface = null;
-// Outputport interface as an introspection (XML) string
+    // Outputport interface as an introspection (XML) string
     String introspectionString;
 
     // Constructor: Save details and instantiate collections
@@ -107,7 +108,7 @@ public class DBusCommChannel extends CommChannel {
                 "");
 
         this.transport.mout.writeMessage(m);
-        Message retOrErr = this.checkInputSpecific(m.getSerial());
+        Message retOrErr = this.listenSpecific(m.getSerial());
         if (retOrErr instanceof MethodReturn) {
             MethodReturn ret = (MethodReturn) retOrErr;
             String xml = (String) ret.getParameters()[0];
@@ -158,7 +159,7 @@ public class DBusCommChannel extends CommChannel {
             elmInterface.setAttribute("name", "le.interface"); // TODO: Make this use the actual interface name
             elmRoot.appendChild(elmInterface);
 
-            // Create method elements
+            // Create req/res-method elements
             Map<String, RequestResponseTypeDescription> rros = iface.requestResponseOperations();
             for (String rroName : rros.keySet()) {
                 RequestResponseTypeDescription rroDesc = rros.get(rroName);
@@ -166,7 +167,7 @@ public class DBusCommChannel extends CommChannel {
                 // Method root element
                 Element elmMethod = doc.createElement("method");
                 elmMethod.setAttribute("name", rroName);
-                elmRoot.appendChild(elmMethod);
+                elmInterface.appendChild(elmMethod);
 
                 // Request arg
                 Element elmArg = doc.createElement("arg");
@@ -180,6 +181,24 @@ public class DBusCommChannel extends CommChannel {
                 elmArg.setAttribute("name", "response");
                 elmArg.setAttribute("type", rroDesc.responseType().toString()); // TODO: Make mapping of this to D-Bus type string
                 elmArg.setAttribute("direction", "out");
+                elmMethod.appendChild(elmArg);
+            }
+            
+            // Create oneway-method elements
+            Map<String, OneWayTypeDescription> owos = iface.oneWayOperations();
+            for (String owoName : owos.keySet()) {
+                RequestResponseTypeDescription owoDesc = rros.get(owoName);
+
+                // Method root element
+                Element elmMethod = doc.createElement("method");
+                elmMethod.setAttribute("name", owoName);
+                elmInterface.appendChild(elmMethod);
+
+                // Request arg
+                Element elmArg = doc.createElement("arg");
+                elmArg.setAttribute("name", "request");
+                elmArg.setAttribute("type", owoDesc.requestType().toString()); // TODO: Make mapping of this to D-Bus type string
+                elmArg.setAttribute("direction", "in");
                 elmMethod.appendChild(elmArg);
             }
 
@@ -224,7 +243,7 @@ public class DBusCommChannel extends CommChannel {
     }
 
     // Blocking: check input stream and add to queue
-    public boolean checkInput() throws IOException, DBusException {
+    public boolean listen() throws IOException, DBusException {
         Message m = transport.min.readMessage();
         Long s = m.getSerial();
 
@@ -237,7 +256,7 @@ public class DBusCommChannel extends CommChannel {
         return false;
     }
 
-    private Message checkInputSpecific(Long serial) throws IOException, DBusException {
+    private Message listenSpecific(Long serial) throws IOException, DBusException {
         while (true) {
             if (this.inputQueue.remove(serial)) {
                 return this.messages.get(serial);
@@ -367,7 +386,7 @@ public class DBusCommChannel extends CommChannel {
             if (TRACE) {
                 System.out.println("recvResponsefor - Looking for response in input transport");
             }
-            Message msg = checkInputSpecific(call.getSerial());
+            Message msg = listenSpecific(call.getSerial());
 
             if (TRACE) {
                 System.out.println("recvResponsefor - Input found, checking type..");
