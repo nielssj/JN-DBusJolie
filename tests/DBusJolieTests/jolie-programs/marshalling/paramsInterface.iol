@@ -1,8 +1,10 @@
-type dbustype:void {
-	.params[1, *]: undefined
+type testType:void {
+	.intValue: int
+	.stringValue: string
+	.intArray[1, 2]: int
 }
 
 interface Params {
 	RequestResponse: 
-		testParams ( dbustype )( dbustype )
+		testParams ( testType )( testType )
 }
