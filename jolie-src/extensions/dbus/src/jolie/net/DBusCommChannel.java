@@ -67,9 +67,8 @@ public class DBusCommChannel extends CommChannel {
     // InputPort interface retrieved with introspection
     ConcurrentHashMap<String, String> introspectedInterface = null;
     // Outputport interface as an introspection (XML) string
-    String introspectionString;
+    Object[] introspectionOutput;
 
-    // Constructor: Save details and instantiate collections
     public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort)
             throws IOException, ParseException, DBusException, ParserConfigurationException, SAXException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
         super();
@@ -83,7 +82,7 @@ public class DBusCommChannel extends CommChannel {
 
         this.isInputPort = isInputPort;
 
-        // Retreive or prepare introspection data (Output/Input)
+        // Retreive introspection data (OutputPort only)
         if (!this.isInputPort) {
             this.IntrospectInput();
         }
@@ -96,6 +95,7 @@ public class DBusCommChannel extends CommChannel {
         }
     }
 
+    // OutputPort: Retreive and parse introspection data of the D-Bus object at the port location
     private void IntrospectInput() throws DBusException, IOException, ParserConfigurationException, SAXException {
         this.introspectedInterface = new ConcurrentHashMap<String, String>();
 
@@ -142,6 +142,7 @@ public class DBusCommChannel extends CommChannel {
         }
     }
 
+    // InputPort: Prepare an introspection string to be returned upon incoming introspection requests.
     public void setIntrospectOutput(Interface iface) {
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -155,9 +156,9 @@ public class DBusCommChannel extends CommChannel {
 
             // Create interface element
             Element elmInterface = doc.createElement("interface");
-            elmInterface.setAttribute("name", "le.interface"); // TODO: Make this use the actual interface name
+            elmInterface.setAttribute("name", this.connectionName);
             elmRoot.appendChild(elmInterface);
-
+            
             // Create req/res-method elements
             Map<String, RequestResponseTypeDescription> rros = iface.requestResponseOperations();
             for (String rroName : rros.keySet()) {
@@ -168,19 +169,33 @@ public class DBusCommChannel extends CommChannel {
                 elmMethod.setAttribute("name", rroName);
                 elmInterface.appendChild(elmMethod);
 
-                // Request arg
-                Element elmArg = doc.createElement("arg");
-                elmArg.setAttribute("name", "request");
-                elmArg.setAttribute("type", rroDesc.requestType().toString()); // TODO: Make mapping of this to D-Bus type string
-                elmArg.setAttribute("direction", "in");
-                elmMethod.appendChild(elmArg);
-
-                // Response arg
-                elmArg = doc.createElement("arg");
-                elmArg.setAttribute("name", "response");
-                elmArg.setAttribute("type", rroDesc.responseType().toString()); // TODO: Make mapping of this to D-Bus type string
-                elmArg.setAttribute("direction", "out");
-                elmMethod.appendChild(elmArg);
+                // Request arg(s)
+                Map<String, String> reqTypes = DBusMarshalling.jolieTypeToDBusString(rroDesc.requestType());
+                for (String argName : reqTypes.keySet()) {
+                    Element elmArg = doc.createElement("arg");
+                    
+                    if(argName.length() > 0) {
+                        elmArg.setAttribute("namue", argName); // Set name, if defined
+                    }
+                    
+                    elmArg.setAttribute("type", reqTypes.get(argName)); // Set type (D-Bus type string)
+                    elmArg.setAttribute("direction", "in");
+                    elmMethod.appendChild(elmArg);
+                }
+                
+                // Response arg(s)
+                Map<String, String> respTypes = DBusMarshalling.jolieTypeToDBusString(rroDesc.responseType());
+                for (String argName : respTypes.keySet()) {
+                    Element elmArg = doc.createElement("arg");
+                    
+                    if(argName.length() > 0) {
+                        elmArg.setAttribute("name", argName); // Set name, if defined
+                    }
+                    
+                    elmArg.setAttribute("type", respTypes.get(argName)); // Set type (D-Bus type string)
+                    elmArg.setAttribute("direction", "out");
+                    elmMethod.appendChild(elmArg);
+                }
             }
             
             // Create oneway-method elements
@@ -192,25 +207,48 @@ public class DBusCommChannel extends CommChannel {
                 Element elmMethod = doc.createElement("method");
                 elmMethod.setAttribute("name", owoName);
                 elmInterface.appendChild(elmMethod);
-
-                // Request arg
-                Element elmArg = doc.createElement("arg");
-                elmArg.setAttribute("name", "request");
-                elmArg.setAttribute("type", owoDesc.requestType().toString()); // TODO: Make mapping of this to D-Bus type string
-                elmArg.setAttribute("direction", "in");
-                elmMethod.appendChild(elmArg);
+                
+                // Request arg(s)
+                Map<String, String> reqTypes = DBusMarshalling.jolieTypeToDBusString(owoDesc.requestType());
+                for (String argName : reqTypes.keySet()) {
+                    Element elmArg = doc.createElement("arg");
+                    
+                    if(argName.length() > 0) {
+                        elmArg.setAttribute("name", argName); // Set name, if defined
+                    }
+                    
+                    elmArg.setAttribute("type", reqTypes.get(argName)); // Set type (D-Bus type string)
+                    elmArg.setAttribute("direction", "in");
+                    elmMethod.appendChild(elmArg);
+                }
             }
+            
+            // Create introspectable interface
+            Element elmIntroInterface = doc.createElement("interface");
+            elmIntroInterface.setAttribute("name", "org.freedesktop.DBus.Introspectable");
+            elmRoot.appendChild(elmIntroInterface);
+            
+            // Create introspect method
+            Element elmIntroMethod = doc.createElement("method");
+            elmIntroMethod.setAttribute("name", "Introspect");
+            elmIntroInterface.appendChild(elmIntroMethod);
+            
+            Element elmIntroArg = doc.createElement("arg");
+            elmIntroArg.setAttribute("type", "s");
+            elmIntroArg.setAttribute("direction", "out");
+            elmIntroMethod.appendChild(elmIntroArg);
 
             TransformerFactory tff = TransformerFactory.newInstance();
             Transformer tf = tff.newTransformer();
             StringWriter sw = new StringWriter();
             tf.transform(new DOMSource(doc), new StreamResult(sw));
-
-            this.introspectionString = sw.getBuffer().toString();
+            String introspectionString = sw.getBuffer().toString();
             
             if (TRACE) {
-                System.out.println("Introspection string: " + this.introspectionString);
+                System.out.println("Introspection string: " + introspectionString);
             }
+            
+            this.introspectionOutput = DBusMarshalling.valuesToDBus(Value.create(introspectionString), new StringBuilder());
         } catch (Exception ex) {
             throw new RuntimeException("Failed to create introspection string", ex);
             // Log warning instead?
@@ -241,12 +279,17 @@ public class DBusCommChannel extends CommChannel {
         }
     }
 
-    // Blocking: check input stream and add to queue
+    // Blocking: Listen untill a message is received
     public boolean listen() throws IOException, DBusException {
         Message m = transport.min.readMessage();
-        Long s = m.getSerial();
 
-        if (!this.inputQueue.contains(s)) {
+        if (m.getName().equals("Introspect")) {
+            this.respondToIntrospection(m);
+            return false;
+        }
+        
+        Long s = m.getSerial();
+        if (m instanceof MethodCall && !this.inputQueue.contains(s)) {
             this.messages.put(s, m);
             this.inputQueue.add(s);
             return true;
@@ -254,7 +297,16 @@ public class DBusCommChannel extends CommChannel {
 
         return false;
     }
+    
+    private void respondToIntrospection(Message m) throws IOException, DBusException {
+        if (TRACE) {
+            System.out.println("respondToIntrospection - returning auto-generated introspection string");
+        }             
+        Message mr = new MethodReturn((MethodCall)m, "s", this.introspectionOutput);
+        this.transport.mout.writeMessage(mr);
+    }
 
+    // Blocking: Listen untill a message with a specific reply serial is received. If the serial was received earlier, return immediately
     private Message listenSpecific(Long serial) throws IOException, DBusException {
         while (true) {
             if (this.inputQueue.remove(serial)) {
@@ -335,7 +387,7 @@ public class DBusCommChannel extends CommChannel {
         this.transport.mout.writeMessage(m);
     }
 
-    // Receive message: Incomming responses (TODO) and incomming calls (OutputPort/InputPort)
+    // Receive message: Incomming calls (InputPort)
     protected CommMessage recvImpl() throws IOException {
         if (TRACE) {
             System.out.println("recvimpl - Called");
@@ -364,13 +416,14 @@ public class DBusCommChannel extends CommChannel {
                     throw new RuntimeException("recvimpl - Unsupported message type");
                 }
             } else {
-                throw new RuntimeException("recvimpl - Input message queue was empty");
+                throw new RuntimeException("recvimpl - Input message queue was empty"); // This should only happen if we have a bug
             }
         } catch (DBusException ex) {
             throw new IOException(ex);
         }
     }
 
+    // Receive message: Incomming responses (OutputPort)
     @Override
     public CommMessage recvResponseFor(CommMessage request) throws IOException {
         if (TRACE) {

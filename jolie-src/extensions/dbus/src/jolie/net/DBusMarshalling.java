@@ -3,17 +3,21 @@ package jolie.net;
 import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import jolie.lang.NativeType;
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
 import org.freedesktop.dbus.Marshalling;
 import org.freedesktop.dbus.UInt16;
 import org.freedesktop.dbus.UInt32;
 import org.freedesktop.dbus.UInt64;
+import org.freedesktop.dbus.Variant;
 import org.freedesktop.dbus.exceptions.DBusException;
 import org.freedesktop.dbus.types.DBusListType;
 import org.freedesktop.dbus.types.DBusMapType;
@@ -286,5 +290,66 @@ public class DBusMarshalling {
         return ret;
       }
     }
+  }
+  
+  private static Map<jolie.lang.NativeType, java.lang.reflect.Type> jnToJavaMap;
+  static 
+  {
+      jnToJavaMap = new EnumMap<jolie.lang.NativeType, java.lang.reflect.Type>(jolie.lang.NativeType.class);
+      jnToJavaMap.put(NativeType.STRING, String.class);
+      jnToJavaMap.put(NativeType.INT, int.class);
+      jnToJavaMap.put(NativeType.LONG, long.class);
+      jnToJavaMap.put(NativeType.BOOL, boolean.class);
+      jnToJavaMap.put(NativeType.DOUBLE, Double.class);
+      jnToJavaMap.put(NativeType.ANY, Object.class);
+  }
+  
+  private static java.lang.reflect.Type jolieNativeTypeToJava(jolie.lang.NativeType jNType) {
+      return DBusMarshalling.jnToJavaMap.get(jNType);
+  }
+  
+  public static Map<String, String> jolieTypeToDBusString(jolie.runtime.typing.Type jType) throws DBusException {
+      Map<String, String> types = new HashMap<String, String>();
+      java.lang.reflect.Type[] javaType;
+      
+      // Is it a complex type?
+      if(jType.subTypeSet().size() > 0) {
+          // Loop through sub-types 
+          for (Entry<String, jolie.runtime.typing.Type> st : jType.subTypeSet()) {
+              
+              // Is it an array?
+              if(st.getValue().cardinality().max() > 1) {
+                  // Make array type string
+                  java.lang.reflect.Type elementType = DBusMarshalling.jolieNativeTypeToJava(st.getValue().nativeType());
+                  javaType = new java.lang.reflect.Type[] { 
+                      new DBusListType(elementType)
+                  };
+              } else {
+                  // Is it a native type or deeper tree structure?
+                  if(st.getValue().subTypeSet().size() > 0) {
+                      // Make native type string
+                      javaType = new java.lang.reflect.Type[] { 
+                            jolieNativeTypeToJava(st.getValue().nativeType())
+                      };
+                  } else {
+                      // Make map type string
+                      javaType = new java.lang.reflect.Type[] { 
+                            new DBusMapType(String.class, Variant.class)
+                      };
+                  }
+              }
+              
+              types.put(st.getKey(), Marshalling.getDBusType(javaType));
+          }
+          
+          
+      } else {
+          javaType = new java.lang.reflect.Type[] { 
+                DBusMarshalling.jolieNativeTypeToJava(jType.nativeType())
+          };
+          types.put("", Marshalling.getDBusType(javaType));
+      }
+      
+      return types;
   }
 }

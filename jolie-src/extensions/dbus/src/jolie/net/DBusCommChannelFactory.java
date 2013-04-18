@@ -41,6 +41,7 @@ fieldSysPath.set( null, null );
     String objectPath = parts[1];
 
     DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, true);
+    channel.setIntrospectOutput(port.getInterface());
 
     boolean nameObtained = channel.obtainName(connectionName);
     if (!nameObtained) {
@@ -57,7 +58,6 @@ fieldSysPath.set( null, null );
     String objectPath = parts[1];
 
     DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, false);
-    channel.setIntrospectOutput(port.getInterface());
     
     return channel;
   }
