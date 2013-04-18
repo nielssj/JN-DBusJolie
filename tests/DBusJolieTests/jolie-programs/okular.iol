@@ -10,7 +10,8 @@ type returnType:void {
 interface Okular {
 	OneWay: 
 		goToPage( long ),
-		openDocument( string )
+		openDocument( string ),
+		test(testtype)
 	RequestResponse: 
 		slotNextPage( void ) ( void ),
 		

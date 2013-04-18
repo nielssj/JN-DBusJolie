@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -64,7 +65,8 @@ public class DBusCommChannel extends CommChannel {
     ConcurrentHashMap<Long, Message> messages;
     ConcurrentHashMap<Long, Message> sentMessages;
 // InputPort interface retrieved with introspection
-    ConcurrentHashMap<String, String> introspectedInterface = null;
+    ConcurrentHashMap<String, String> introspectedSignatures = null;
+    ConcurrentHashMap<String, String[]> introspectedArgNames = null;
 // Outputport interface as an introspection (XML) string
     String introspectionString;
 
@@ -96,7 +98,8 @@ public class DBusCommChannel extends CommChannel {
     }
 
     private void IntrospectInput() throws DBusException, IOException, ParserConfigurationException, SAXException {
-        this.introspectedInterface = new ConcurrentHashMap<String, String>();
+        this.introspectedSignatures = new ConcurrentHashMap<String, String>();
+        this.introspectedArgNames = new ConcurrentHashMap<String, String[]>();
 
         MethodCall m = new MethodCall(
                 this.connectionName,
@@ -123,6 +126,7 @@ public class DBusCommChannel extends CommChannel {
                 Node method = methods.item(i);
 
                 String name = method.getAttributes().getNamedItem("name").getNodeValue();
+                ArrayList<String> argNames = new ArrayList<String>();
                 String signature = "";
 
                 NodeList children = method.getChildNodes();
@@ -131,12 +135,15 @@ public class DBusCommChannel extends CommChannel {
 
                     if (child.getNodeName().equals("arg")) {
                         NamedNodeMap attributes = child.getAttributes();
+                        argNames.add(attributes.getNamedItem("name").getNodeValue());
 
                         if (attributes.getNamedItem("direction").getNodeValue().equals("in")) {
                             signature += attributes.getNamedItem("type").getNodeValue();
                         }
                     }
                 }
+                this.introspectedSignatures.put(name, signature);
+                this.introspectedArgNames.put(name, argNames.toArray(new String[argNames.size()]));
             }
         }
     }
@@ -289,8 +296,8 @@ public class DBusCommChannel extends CommChannel {
                 }
             } else {
                 // Outgoing method call (OutputPort)
-                if (this.introspectedInterface != null) {
-                    typeString = this.introspectedInterface.get(message.operationName());
+                if (this.introspectedSignatures != null) {
+                    typeString = this.introspectedSignatures.get(message.operationName());
                 }
 
                 m = new MethodCall(

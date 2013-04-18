@@ -8,7 +8,10 @@ outputPort Okular {
 
 main
 {	
-	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
+	req.params.param = 1;
+	req.params[1].param = 1;
+	//openDocument@Okular( "~/Downloads/dbus-java.pdf" );
+	test@Okular(req );
 	goToPage@Okular( 17 );
 	slotNextPage@Okular()();
 

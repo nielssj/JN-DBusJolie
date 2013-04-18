@@ -95,7 +95,30 @@ public class DBusMarshalling {
       return false;
     }
   }
+  
+  public static Object[] valueToDBus(Value value, String[] argNames) throws DBusException {
+     ArrayList<Object> objects = new ArrayList<Object>();
+    Map<String, ValueVector> children = value.children();
+    String typeString;
+    List<Type> types = new ArrayList<Type>();
 
+    if (children.isEmpty()) {
+      if (value.isDefined()) {
+        Object valObj = value.valueObject();
+
+        types.add(valObj.getClass());
+        objects.add(valObj);
+      }
+    } else {
+      for (String argName : argNames) {
+        ValueVector vv = children.get(argName);
+        objects.add(DBusMarshalling.valueVectorToDBus(vv));
+      }
+    }
+    
+    return objects.toArray();
+  }
+  
   public static synchronized Object[] valuesToDBus(Value value, StringBuilder builder) throws DBusException {
     ArrayList<Object> objects = new ArrayList<Object>();
     Map<String, ValueVector> children = value.children();
