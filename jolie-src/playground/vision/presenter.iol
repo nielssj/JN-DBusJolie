@@ -34,7 +34,7 @@ type StartClientSessionRequest:void {
 
 type StartClientSessionResponse:void {
 	.documentUrl:string
-	.pageNumber:int
+	.pageNumber:long
 	.sid:int
 }
 
