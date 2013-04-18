@@ -54,12 +54,12 @@ class TypeImpl extends Type
 		}
 	}
 	
-	protected Set< Entry< String, Type > > subTypeSet()
+	public Set< Entry< String, Type > > subTypeSet()
 	{
 		return subTypeSet;
 	}
 
-	protected Range cardinality()
+	public Range cardinality()
 	{
 		return cardinality;
 	}
@@ -238,7 +238,7 @@ class TypeImpl extends Type
 		return false;
 	}
 	
-	protected NativeType nativeType()
+	public NativeType nativeType()
 	{
 		return nativeType;
 	}
@@ -296,9 +296,9 @@ public abstract class Type implements Cloneable
 	}
 
 	public abstract void cutChildrenFromValue( Value value );
-	protected abstract NativeType nativeType();
-	protected abstract Range cardinality();
-	protected abstract Set< Entry< String, Type > > subTypeSet();
+	public abstract NativeType nativeType();
+	public abstract Range cardinality();
+	public abstract Set< Entry< String, Type > > subTypeSet();
 	protected abstract void check( Value value, StringBuilder pathBuilder )
 		throws TypeCheckingException;
 	protected abstract Value cast( Value value, StringBuilder pathBuilder )
@@ -316,12 +316,12 @@ public abstract class Type implements Cloneable
 			this.cardinality = cardinality;
 		}
 		
-		protected Set< Entry< String, Type > > subTypeSet()
+		public Set< Entry< String, Type > > subTypeSet()
 		{
 			return linkedType.subTypeSet();
 		}
 		
-		protected NativeType nativeType()
+		public NativeType nativeType()
 		{
 			return linkedType.nativeType();
 		}
@@ -341,7 +341,7 @@ public abstract class Type implements Cloneable
 			linkedType.cutChildrenFromValue( value );
 		}
 
-		protected Range cardinality()
+		public Range cardinality()
 		{
 			return cardinality;
 		}
