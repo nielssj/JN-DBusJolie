@@ -64,9 +64,9 @@ public class DBusCommChannel extends CommChannel {
     // Messages being executed or waiting to be, indexed by D-Bus serial
     ConcurrentHashMap<Long, Message> messages;
     ConcurrentHashMap<Long, Message> sentMessages;
-// InputPort interface retrieved with introspection
+    // InputPort interface retrieved with introspection
     ConcurrentHashMap<String, String> introspectedInterface = null;
-// Outputport interface as an introspection (XML) string
+    // Outputport interface as an introspection (XML) string
     String introspectionString;
 
     // Constructor: Save details and instantiate collections
@@ -108,7 +108,7 @@ public class DBusCommChannel extends CommChannel {
                 "");
 
         this.transport.mout.writeMessage(m);
-        Message retOrErr = this.checkInputSpecific(m.getSerial());
+        Message retOrErr = this.listenSpecific(m.getSerial());
         if (retOrErr instanceof MethodReturn) {
             MethodReturn ret = (MethodReturn) retOrErr;
             String xml = (String) ret.getParameters()[0];
@@ -242,7 +242,7 @@ public class DBusCommChannel extends CommChannel {
     }
 
     // Blocking: check input stream and add to queue
-    public boolean checkInput() throws IOException, DBusException {
+    public boolean listen() throws IOException, DBusException {
         Message m = transport.min.readMessage();
         Long s = m.getSerial();
 
@@ -255,7 +255,7 @@ public class DBusCommChannel extends CommChannel {
         return false;
     }
 
-    private Message checkInputSpecific(Long serial) throws IOException, DBusException {
+    private Message listenSpecific(Long serial) throws IOException, DBusException {
         while (true) {
             if (this.inputQueue.remove(serial)) {
                 return this.messages.get(serial);
@@ -385,7 +385,7 @@ public class DBusCommChannel extends CommChannel {
             if (TRACE) {
                 System.out.println("recvResponsefor - Looking for response in input transport");
             }
-            Message msg = checkInputSpecific(call.getSerial());
+            Message msg = listenSpecific(call.getSerial());
 
             if (TRACE) {
                 System.out.println("recvResponsefor - Input found, checking type..");
