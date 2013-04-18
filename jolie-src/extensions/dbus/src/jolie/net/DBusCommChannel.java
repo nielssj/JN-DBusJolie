@@ -41,6 +41,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import jolie.net.ports.Interface;
+import jolie.runtime.typing.OneWayTypeDescription;
 import jolie.runtime.typing.RequestResponseTypeDescription;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -157,7 +158,7 @@ public class DBusCommChannel extends CommChannel {
             elmInterface.setAttribute("name", "le.interface"); // TODO: Make this use the actual interface name
             elmRoot.appendChild(elmInterface);
 
-            // Create method elements
+            // Create req/res-method elements
             Map<String, RequestResponseTypeDescription> rros = iface.requestResponseOperations();
             for (String rroName : rros.keySet()) {
                 RequestResponseTypeDescription rroDesc = rros.get(rroName);
@@ -165,7 +166,7 @@ public class DBusCommChannel extends CommChannel {
                 // Method root element
                 Element elmMethod = doc.createElement("method");
                 elmMethod.setAttribute("name", rroName);
-                elmRoot.appendChild(elmMethod);
+                elmInterface.appendChild(elmMethod);
 
                 // Request arg
                 Element elmArg = doc.createElement("arg");
@@ -179,6 +180,24 @@ public class DBusCommChannel extends CommChannel {
                 elmArg.setAttribute("name", "response");
                 elmArg.setAttribute("type", rroDesc.responseType().toString()); // TODO: Make mapping of this to D-Bus type string
                 elmArg.setAttribute("direction", "out");
+                elmMethod.appendChild(elmArg);
+            }
+            
+            // Create oneway-method elements
+            Map<String, OneWayTypeDescription> owos = iface.oneWayOperations();
+            for (String owoName : owos.keySet()) {
+                RequestResponseTypeDescription owoDesc = rros.get(owoName);
+
+                // Method root element
+                Element elmMethod = doc.createElement("method");
+                elmMethod.setAttribute("name", owoName);
+                elmInterface.appendChild(elmMethod);
+
+                // Request arg
+                Element elmArg = doc.createElement("arg");
+                elmArg.setAttribute("name", "request");
+                elmArg.setAttribute("type", owoDesc.requestType().toString()); // TODO: Make mapping of this to D-Bus type string
+                elmArg.setAttribute("direction", "in");
                 elmMethod.appendChild(elmArg);
             }
 
