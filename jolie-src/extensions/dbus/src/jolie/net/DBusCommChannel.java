@@ -15,6 +15,7 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,12 +68,13 @@ public class DBusCommChannel extends CommChannel {
   private ConcurrentHashMap<Long, Message> messages;
   private ConcurrentHashMap<Long, Message> sentMessages;
   // The maps below are only updated at init, so there is no need to make them concurrent
-  // Output port - The signatures of method, aquired by calling Introspect on the remote object
-  private Map<String, String> introspectedSignatures = null;
+  // Output port  - The signatures of method, aquired by calling IntrospectInput on the remote object
+  // Input port   - The signatures of the return value of the method, aquired by calling setIntrospectOutput on the interface
+  private Map<String, String> introspectedSignatures = new HashMap<String, String>();
   // Output port  - The names of the arguments given to remote method calls, in the order that they should appear when calling. 
   // Input port   - The names of expected arguments from remote callers
   private Map<String, String[]> requestArgs = new HashMap<String, String[]>();
-  // Output port - The names of the arguments that are expected in response to remote method calls.
+  // Output port  - The names of the arguments that are expected in response to remote method calls.
   // Input port   - The names of the arguments in a method return that should be sent to remote callers
   private Map<String, String[]> responseArgs = new HashMap<String, String[]>();
   // Outputport interface as an introspection (XML) string
@@ -106,8 +108,6 @@ public class DBusCommChannel extends CommChannel {
 
   // OutputPort: Retreive and parse introspection data of the D-Bus object at the port location
   private void IntrospectInput() throws DBusException, IOException, ParserConfigurationException, SAXException {
-    this.introspectedSignatures = new HashMap<String, String>();
-
     MethodCall m = new MethodCall(
             this.connectionName,
             this.objectPath,
@@ -162,7 +162,7 @@ public class DBusCommChannel extends CommChannel {
               if (argName == null || argName.getNodeValue().equals("")) {
                 argsHaveNames = false;
               } else {
-                inputArgNames.add(argName.getNodeValue());
+                outputArgNames.add(argName.getNodeValue());
               }
             }
           }
@@ -248,6 +248,12 @@ public class DBusCommChannel extends CommChannel {
           elmMethod.appendChild(elmArg);
         }
 
+        StringBuilder signature = new StringBuilder();
+        for (String s : respTypes.values()) {
+          signature.append(s);
+        }
+
+        this.introspectedSignatures.put(rroName, signature.toString());
         this.requestArgs.put(rroName, requestArgNames.toArray(new String[requestArgNames.size()]));
         this.responseArgs.put(rroName, responseArgNames.toArray(new String[responseArgNames.size()]));
       }
@@ -256,6 +262,7 @@ public class DBusCommChannel extends CommChannel {
       Map<String, OneWayTypeDescription> owos = iface.oneWayOperations();
       for (String owoName : owos.keySet()) {
         RequestResponseTypeDescription owoDesc = rros.get(owoName);
+        ArrayList<String> requestArgNames = new ArrayList<String>();
 
         // Method root element
         Element elmMethod = doc.createElement("method");
@@ -268,6 +275,7 @@ public class DBusCommChannel extends CommChannel {
           Element elmArg = doc.createElement("arg");
 
           if (argName.length() > 0) {
+            requestArgNames.add(argName);
             elmArg.setAttribute("name", argName); // Set name, if defined
           }
 
@@ -275,6 +283,8 @@ public class DBusCommChannel extends CommChannel {
           elmArg.setAttribute("direction", "in");
           elmMethod.appendChild(elmArg);
         }
+
+        this.requestArgs.put(owoName, requestArgNames.toArray(new String[requestArgNames.size()]));
       }
 
       // Create introspectable interface
@@ -400,8 +410,9 @@ public class DBusCommChannel extends CommChannel {
       if (isInputPort) {
         // Response to method call (InputPort)
         if (!message.isFault()) {
-          typeString = builder.toString();
-          values = DBusMarshalling.valueToDBus(message.value(), builder);
+          typeString = this.introspectedSignatures.get(message.operationName());
+          String[] argNames = this.requestArgs.get(message.operationName());
+          values = DBusMarshalling.valueToDBus(message.value(), argNames);
 
           m = new MethodReturn(
                   (MethodCall) messages.remove(message.id()),
@@ -506,7 +517,9 @@ public class DBusCommChannel extends CommChannel {
         if (TRACE) {
           System.out.printf("recvResponsefor - Response appears to be successful, marshalling to Jolie CommMessage: %s\n", msg);
         }
-        Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.responseArgs.get(msg.getName()));
+        String[] tmp = this.responseArgs.get(request.operationName());
+        String[] tmp2 = this.requestArgs.get(request.operationName());
+        Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.responseArgs.get(request.operationName()));
         return CommMessage.createResponse(request, val);
       } else if (msg instanceof Error) {
         if (TRACE) {

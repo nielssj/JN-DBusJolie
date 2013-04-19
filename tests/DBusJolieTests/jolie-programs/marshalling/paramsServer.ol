@@ -6,45 +6,69 @@ inputPort ParamsServer {
 	Interfaces: Params
 }
 
-execution { single }
+execution { sequential }
 
 main
 {
 	[ testParams ( request ) ( response )  {
-		if (request.params[0] == 42) {
+		if (request.intValue == 42) {
 			println@Console( "Passed" )()
 		} else {
-			println@Console( "Test for params 0 passing failed, got " + request.params[0] )()
+			println@Console( "Test for intValue failed, got " + request.intValue )()
 		};
 
-		if (request.params[1] == "John Doe") {
+		if (request.stringValue == "John Doe") {
 			println@Console( "Passed" )()
 		} else {
-			println@Console( "Test for params 1 passing failed, got " + request.params[1] )()
+			println@Console( "Test for stringValue failed, got " + request.stringValue)()
 		};
 
-		if (request.params[2].field1 == true) {
+		if (request.boolMap.trueValue == true) {
 			println@Console( "Passed" )()
 		} else {
-			println@Console( "Test for params 2 field1 passing failed, got " + request.params[2].field1 )()
+			println@Console( "Test for pboolMap trueValue failed, got " + request.boolMap.trueValue )()
 		};
 
-		if (request.params[2].field2 == false) {
+		if (request.boolMap.falseValue == false) {
 			println@Console( "Passed" )()
 		} else {
-			println@Console( "Test for params 2 field2 passing failed, got " + request.params[2].field2 )()
+			println@Console( "Test for boolMap falseValue failed, got " + request.boolMap.falseValue )()
 		};
 
-		if (request.params[3].field1[0] == 0) {
+		if (request.longMapArray[0].long1 == 1L) {
 			println@Console( "Passed" )()
 		} else {
-			println@Console( "Test for params 3 field1, index 0 passing failed, got " + request.params[3].field1[0] )()
+			println@Console( "Test for longMapArray, index 0, long1 failed, got " + request.longMapArray[0].long1 )()
 		};
 
-		if (request.params[3].field1[1] == 1) {
+		if (request.longMapArray[0].long2 == 2L) {
 			println@Console( "Passed" )()
 		} else {
-			println@Console( "Test for params 3 field1, index 1 passing failed, got " + request.params[3].field1[1] )()
+			println@Console( "Test for longMapArray, index 0, long2 failed, got " + request.longMapArray[0].long2 )()
+		};
+
+		if (request.longMapArray[1].long1 == 3L) {
+			println@Console( "Passed" )()
+		} else {
+			println@Console( "Test for longMapArray, index 1, long1 failed, got " + request.longMapArray[1].long1 )()
+		};
+
+		if (request.longMapArray[1].long2 == 4L) {
+			println@Console( "Passed" )()
+		} else {
+			println@Console( "Test for longMapArray, index 1, long2 failed, got " + request.longMapArray[1].long2 )()
+		};
+
+		if (request.intArray[0] == 0) {
+			println@Console( "Passed" )()
+		} else {
+			println@Console( "Test for intArray, index 0 failed, got " + request.intArray[0] )()
+		};
+
+		if (request.intArray[1] == 1) {
+			println@Console( "Passed" )()
+		} else {
+			println@Console( "Test for intArray, index 1 failed, got " + request.intArray[1] )()
 		};
 
 		// Copy the full request and return it

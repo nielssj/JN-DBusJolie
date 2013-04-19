@@ -8,48 +8,76 @@ outputPort ParamsServer {
 
 main 
 {
-	argument.params[0] = 42;
-	argument.params[1] = "John Doe";
-	argument.params[2].field1 = true;
-	argument.params[2].field2 = false;
-	argument.params[3].field1[0] = 0;
-	argument.params[3].field1[1] = 1;
+	argument.intValue = 42;
+	argument.stringValue = "John Doe";
+	argument.boolMap.trueValue = true;
+	argument.boolMap.falseValue = false;
+	argument.intArray[0] = 0;
+	argument.intArray[1] = 1;
+	argument.longMapArray[0].long1 = 1L;
+	argument.longMapArray[0].long2 = 2L;
+	argument.longMapArray[1].long1 = 3L;
+	argument.longMapArray[1].long2 = 4L;
 
 	testParams@ParamsServer( argument )( response );
 
-	if (response.params[0] == 42) {
+	if (response.intValue == 42) {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 0 passing failed, got " + response.params[0] )()
+		println@Console( "Test for intValue failed, got " + response.intValue )()
 	};
 
-	if (response.params[1] == "John Doe") {
+	if (response.stringValue == "John Doe") {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 1 passing failed, got " + response.params[1] )()
+		println@Console( "Test for stringValue failed, got " + response.stringValue)()
 	};
 
-	if (response.params[2].field1 == true) {
+	if (response.boolMap.trueValue == true) {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 2 field1 passing failed, got " + response.params[2].fibeld1 )()
+		println@Console( "Test for pboolMap trueValue failed, got " + response.boolMap.trueValue )()
 	};
 
-	if (response.params[2].field2 == false) {
+	if (response.boolMap.falseValue == false) {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 2 field2 passing failed, got " + response.params[2].field2 )()
+		println@Console( "Test for boolMap falseValue failed, got " + response.boolMap.falseValue )()
 	};
 
-	if (response.params[3].field1[0] == 0) {
+	if (response.longMapArray[0].long1 == 1L) {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 3 field1, index 0 passing failed, got " + response.params[3].field1[0] )()
+		println@Console( "Test for longMapArray, index 0, long1 failed, got " + response.longMapArray[0].long1 )()
 	};
 
-	if (response.params[3].field1[1] == 1) {
+	if (response.longMapArray[0].long2 == 2L) {
 		println@Console( "Passed" )()
 	} else {
-		println@Console( "Test for params 3 field1, index 1 passing failed, got " + response.params[3].field1[1] )()
+		println@Console( "Test for longMapArray, index 0, long2 failed, got " + response.longMapArray[0].long2 )()
+	};
+
+	if (response.longMapArray[1].long1 == 3L) {
+		println@Console( "Passed" )()
+	} else {
+		println@Console( "Test for longMapArray, index 1, long1 failed, got " + response.longMapArray[1].long1 )()
+	};
+
+	if (response.longMapArray[1].long2 == 4L) {
+		println@Console( "Passed" )()
+	} else {
+		println@Console( "Test for longMapArray, index 1, long2 failed, got " + response.longMapArray[1].long2 )()
+	};
+
+	if (response.intArray[0] == 0) {
+		println@Console( "Passed" )()
+	} else {
+		println@Console( "Test for intArray, index 0 failed, got " + response.intArray[0] )()
+	};
+
+	if (response.intArray[1] == 1) {
+		println@Console( "Passed" )()
+	} else {
+		println@Console( "Test for intArray, index 1 failed, got " + response.intArray[1] )()
 	}
 }

@@ -5,3 +5,4 @@ private.properties
 private.xml
 *.*~
 /tests/DBusJolieTests/nbproject/private/
+/jolie-src/libjolie/nbproject/private/
