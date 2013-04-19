@@ -2,14 +2,14 @@ include "okular.iol"
 include "console.iol"
 
 outputPort Okular {
-	Location: "dbus:/org.kde.okular-2611:/okular"
+	Location: "dbus:/org.kde.okular-2387:/okular"
 	Interfaces: Okular
 }
 
 main
 {	
 	openDocument@Okular( "~/Downloads/dbus-java.pdf" );
-	goToPage@Okular( 17 );
+	goToPage@Okular( 14 );
 	slotNextPage@Okular()();
 
 	currentDocument@Okular()(currentDocument);
