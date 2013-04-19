@@ -59,13 +59,17 @@ public class DBusCommChannel extends CommChannel {
     private String connectionName;
     private String objectPath;
     private boolean isInputPort;
+    // Inputports are always introspectable, outputports are determined by calling introspec
+    private boolean isIntrospectable = true;
     // Detected messages waiting to be scheduled for execution by CommCore
     ConcurrentLinkedQueue<Long> inputQueue;
     // Messages being executed or waiting to be, indexed by D-Bus serial
     ConcurrentHashMap<Long, Message> messages;
     ConcurrentHashMap<Long, Message> sentMessages;
     // InputPort interface retrieved with introspection
-    ConcurrentHashMap<String, String> introspectedInterface = null;
+    ConcurrentHashMap<String, String> introspectedSignatures = null;
+    ConcurrentHashMap<String, String[]> introspectedInputArgs = null;
+    ConcurrentHashMap<String, String[]> introspectedOutputArgs = null;
     // Outputport interface as an introspection (XML) string
     Object[] introspectionOutput;
 
@@ -97,7 +101,9 @@ public class DBusCommChannel extends CommChannel {
 
     // OutputPort: Retreive and parse introspection data of the D-Bus object at the port location
     private void IntrospectInput() throws DBusException, IOException, ParserConfigurationException, SAXException {
-        this.introspectedInterface = new ConcurrentHashMap<String, String>();
+        this.introspectedSignatures = new ConcurrentHashMap<String, String>();
+        this.introspectedInputArgs = new ConcurrentHashMap<String, String[]>();
+        this.introspectedOutputArgs = new ConcurrentHashMap<String, String[]>();
 
         MethodCall m = new MethodCall(
                 this.connectionName,
@@ -108,40 +114,77 @@ public class DBusCommChannel extends CommChannel {
                 "");
 
         this.transport.mout.writeMessage(m);
-        Message retOrErr = this.listenSpecific(m.getSerial());
+        Message retOrErr = this.checkInputSpecific(m.getSerial());
         if (retOrErr instanceof MethodReturn) {
-            MethodReturn ret = (MethodReturn) retOrErr;
-            String xml = (String) ret.getParameters()[0];
+          MethodReturn ret = (MethodReturn) retOrErr;
+          String xml = (String) ret.getParameters()[0];
 
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder b = factory.newDocumentBuilder();
+          DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+          DocumentBuilder b = factory.newDocumentBuilder();
 
-            InputStream is = new ByteArrayInputStream(xml.getBytes());
-            Document d = b.parse(is);
-            NodeList methods = d.getElementsByTagName("method");
+          InputStream is = new ByteArrayInputStream(xml.getBytes());
+          Document d = b.parse(is);
+          NodeList methods = d.getElementsByTagName("method");
 
-            for (int i = 0; i < methods.getLength(); i++) {
-                Node method = methods.item(i);
+          for (int i = 0; i < methods.getLength(); i++) {
+            Node method = methods.item(i);
 
-                String name = method.getAttributes().getNamedItem("name").getNodeValue();
-                String signature = "";
+            String name = method.getAttributes().getNamedItem("name").getNodeValue();
+            ArrayList<String> inputArgNames = new ArrayList<String>();
+            ArrayList<String> outputArgNames = new ArrayList<String>();
+            String signature = "";
+            int inputArgCount = 0;
+            int outputArgCount = 0;
 
-                NodeList children = method.getChildNodes();
-                for (int j = 0; j < children.getLength(); j++) {
-                    Node child = children.item(j);
+            NodeList children = method.getChildNodes();
+            boolean argsHaveNames = true;
+            for (int j = 0; j < children.getLength(); j++) {
+              Node child = children.item(j);
 
-                    if (child.getNodeName().equals("arg")) {
-                        NamedNodeMap attributes = child.getAttributes();
+              if (child.getNodeName().equals("arg")) {
+                NamedNodeMap attributes = child.getAttributes();
 
-                        if (attributes.getNamedItem("direction").getNodeValue().equals("in")) {
-                            signature += attributes.getNamedItem("type").getNodeValue();
-                        }
-                    }
+                Node argName = attributes.getNamedItem("name");
+                if (attributes.getNamedItem("direction").getNodeValue().equals("in")) {
+                  signature += attributes.getNamedItem("type").getNodeValue();
+                  inputArgCount++;
+
+                  if (argName == null || argName.getNodeValue().equals("")) {
+                    argsHaveNames = false;
+                  } else {
+                    inputArgNames.add(argName.getNodeValue());
+                  }
+                } else {
+                  outputArgCount++;
+                  if (argName == null || argName.getNodeValue().equals("")) {
+                    argsHaveNames = false;
+                  } else {
+                    inputArgNames.add(argName.getNodeValue());
+                  }
                 }
-                this.introspectedInterface.put(name, signature);
+              }
             }
+            this.introspectedSignatures.put(name, signature);
+
+            if (!argsHaveNames) {
+              // In theory, some args may have names, and others not. In that case we default to ALL args having arg0, arg1 etc.
+              inputArgNames.clear();
+              outputArgNames.clear();
+
+              for (int argNo = 0; argNo < inputArgCount; argNo++) {
+                inputArgNames.add("arg" + argNo);
+              }
+              for (int argNo = 0; argNo < outputArgCount; argNo++) {
+                outputArgNames.add("arg" + argNo);
+              }
+            }
+            this.introspectedInputArgs.put(name, inputArgNames.toArray(new String[inputArgNames.size()]));
+            this.introspectedOutputArgs.put(name, outputArgNames.toArray(new String[outputArgNames.size()]));
+          }
+        } else {
+          this.isIntrospectable = false;
         }
-    }
+      }
 
     // InputPort: Prepare an introspection string to be returned upon incoming introspection requests.
     public void setIntrospectOutput(Interface iface) {
@@ -341,8 +384,8 @@ public class DBusCommChannel extends CommChannel {
 
         Message m;
         try {
-            Object[] values = DBusMarshalling.valuesToDBus(message.value(), builder);
-            String typeString = builder.toString();
+            Object[] values;
+            String typeString;
 
             if (TRACE) {
                 System.out.printf("sendimpl - Typestring: %s \n", typeString);
@@ -350,6 +393,9 @@ public class DBusCommChannel extends CommChannel {
             if (isInputPort) {
                 // Response to method call (InputPort)
                 if (!message.isFault()) {
+                    typeString = builder.toString();
+                    values = DBusMarshalling.valueToDBus(message.value(), builder);
+
                     m = new MethodReturn(
                             (MethodCall) messages.remove(message.id()),
                             typeString,
@@ -361,8 +407,13 @@ public class DBusCommChannel extends CommChannel {
                 }
             } else {
                 // Outgoing method call (OutputPort)
-                if (this.introspectedInterface != null) {
-                    typeString = this.introspectedInterface.get(message.operationName());
+                if (this.isIntrospectable) {
+                    typeString = this.introspectedSignatures.get(message.operationName());
+                    String[] argNames = this.introspectedInputArgs.get(message.operationName());
+                    values = DBusMarshalling.valueToDBus(message.value(), argNames);
+                } else {
+                    values = DBusMarshalling.valueToDBus(message.value(), builder);
+                    typeString = builder.toString();
                 }
 
                 m = new MethodCall(
@@ -406,7 +457,7 @@ public class DBusCommChannel extends CommChannel {
                         System.out.printf("recvimpl - is MethodCall, marshalling to Jolie CommMessage: %s\n", msg);
                     }
 
-                    Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig());
+                    Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspectedOutputArgs.get(msg.getName()));
                     CommMessage cmsg = new CommMessage(msg.getSerial(), msg.getName(), "/", val, null);
 
                     if (TRACE) {
@@ -448,7 +499,7 @@ public class DBusCommChannel extends CommChannel {
                 if (TRACE) {
                     System.out.printf("recvResponsefor - Response appears to be successful, marshalling to Jolie CommMessage: %s\n", msg);
                 }
-                Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig());
+                Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspectedOutputArgs.get(msg.getName()));
                 return CommMessage.createResponse(request, val);
             } else if (msg instanceof Error) {
                 if (TRACE) {

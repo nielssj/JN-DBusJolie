@@ -100,7 +100,42 @@ public class DBusMarshalling {
     }
   }
 
-  public static synchronized Object[] valuesToDBus(Value value, StringBuilder builder) throws DBusException {
+  /*
+   * Build an array of objects from a Jolie Value. Requires the name of the arguments, which means you must have introspected the object that you are calling.
+   * The length of Value.children() and argNames must match, and the keys must be the same
+   */
+  public static Object[] valueToDBus(Value value, String[] argNames) throws DBusException {
+    ArrayList<Object> objects = new ArrayList<Object>();
+    Map<String, ValueVector> children = value.children();
+
+    if (children.isEmpty()) {
+      if (value.isDefined()) {
+        Object valObj = value.valueObject();
+
+        objects.add(valObj);
+      }
+    } else {
+      // We need to use sets here, since the order of the argument names does not matter
+      if (!children.keySet().equals(new HashSet<String>(Arrays.asList(argNames)))) {
+        throw new RuntimeException("Trying to pass an object with keys " + children.keySet() + " to a method expecting " + Arrays.deepToString(argNames));
+      }
+
+      for (String argName : argNames) {
+        ValueVector vv = children.get(argName);
+        objects.add(DBusMarshalling.valueVectorToDBus(vv));
+      }
+    }
+
+    return objects.toArray();
+  }
+
+  /*
+   * Builds an array of objects and their type string from a Jolie Value. The value must be either a single root value (with no children),
+   * or the children must be named arg0, arg1, etc.
+   * 
+   * This should be used when you have no introspection data, i.e. no knowledge (in Jolie) of argument names and types.
+   */
+  public static synchronized Object[] valueToDBus(Value value, StringBuilder builder) throws DBusException {
     ArrayList<Object> objects = new ArrayList<Object>();
     Map<String, ValueVector> children = value.children();
     String typeString;
@@ -112,23 +147,28 @@ public class DBusMarshalling {
 
         types.add(valObj.getClass());
         objects.add(valObj);
-      }
-    } else if (children.size() == 1 && (children.get("params") != null)) {
-      ValueVector params = children.get("params");
-
-      for (Value v : params) {
-        objects.add(DBusMarshalling.valueToDBus(v));
-        types.add(DBusMarshalling.getType(v));
-      }
+      } 
     } else {
-      throw new RuntimeException("Arguments to DBus must be either a single type or a map with one property named .params");
+      // Sort the arg names first, to ensure that they are ordered arg0, arg1 etc. 
+      String[] sortedNames = children.keySet().toArray(new String[children.keySet().size()]);
+      Arrays.sort(sortedNames);
+
+      for (String name : sortedNames) {
+        if (name.indexOf("arg") == -1) {
+          throw new RuntimeException("Values given to non-introspectable types must be of the form arg0, arg1 etc.");
+        } else {
+          for (Value v : children.get(name)) {
+            objects.add(DBusMarshalling.valueToDBus(v));
+            types.add(DBusMarshalling.getType(v));
+          }
+        }
+      }
     }
 
     typeString = Marshalling.getDBusType(types.toArray(new Type[types.size()]));
-    
+
     builder.append(typeString);
     return objects.toArray();
-    //return Marshalling.convertParameters(objects.toArray(), types.toArray(new Type[types.size()]), null);
   }
 
   private static Object valueToDBus(Value value) throws DBusException {
@@ -164,8 +204,8 @@ public class DBusMarshalling {
   }
 
   private static Value singleDBusToJolie(Object val, Type t) {
-    if (DBusMarshalling.specialType(t)) {
-      return DBusMarshalling.specialTypeToJolieValue(val, t);
+    if (t instanceof DBusMapType) {
+      return DBusMarshalling.DBusMapToJolie((Map) val, (DBusMapType) t);
     } else if (t.equals(Short.class)) {
       return Value.create(((Short) val).intValue());
     } else if (t.equals(Integer.class)) {
@@ -194,10 +234,6 @@ public class DBusMarshalling {
     }
   }
 
-  private static boolean specialType(Type t) {
-    return t instanceof DBusMapType || t instanceof DBusListType;
-  }
-
   private static Value DBusMapToJolie(Map m, DBusMapType t) {
     Value ret = Value.create();
     Map<String, ValueVector> children = ret.children();
@@ -205,14 +241,8 @@ public class DBusMarshalling {
 
     for (Iterator it = m.entrySet().iterator(); it.hasNext();) {
       Entry e = (Entry) it.next();
-      ValueVector v;
-
-      if (valType instanceof DBusListType) {
-        v = DBusMarshalling.DBusListToJolie((Iterable) e.getValue(), (DBusListType) valType);
-      } else {
-        v = ValueVector.create();
-        v.add(DBusMarshalling.singleDBusToJolie(e.getValue(), valType));
-      }
+      ValueVector v = ValueVector.create();
+      DBusMarshalling.addObjectToValueVector(e.getValue(), valType, v);
       children.put((String) e.getKey(), v);
     }
 
@@ -236,59 +266,49 @@ public class DBusMarshalling {
     return v;
   }
 
-  private static Value specialTypeToJolieValue(Object o, Type t) {
-    if (t instanceof DBusMapType) {
-      return DBusMarshalling.DBusMapToJolie((Map) o, (DBusMapType) t);
-    } else if (t instanceof DBusListType) {
-      Value ret = Value.create();
-      Map<String, ValueVector> children = ret.children();
-      ValueVector v = DBusMarshalling.DBusListToJolie(o, (DBusListType) t);
-
-      children.put("", v);
-
-      return ret;
-    }
-    return null;
-  }
-
   /*
-   * Given an array óf objects and a DBus signature string, convert it to a Jolie Value.
+   * Given an array of objects and a DBus signature string, convert it to a Jolie Value.
    * If the array of objects is null or empty, returns an undefined value.
    * If the signature has a single type, return the value found at val[0] as a Jolie value
    * If the signature has multiple types, return them as a Jolie value with a single child
    * named `params` which is an array. 
    */
-  public static Value ToJolieValue(Object[] val, String signature) throws DBusException {
+  public static Value ToJolieValue(Object[] val, String signature, String[] argNames) throws DBusException {
     if (val == null || val.length == 0) {
       return Value.UNDEFINED_VALUE;
     } else {
       List<Type> types = new ArrayList<Type>();
       Marshalling.getJavaType(signature, types, -1);
 
-      if (types.size() == 1 && !DBusMarshalling.specialType(types.get(0))) {
+      if (types.size() == 1 && !(types.get(0) instanceof DBusListType)) {
         return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));
       } else {
         Value ret = Value.create();
-        ValueVector vector = ret.getChildren("params");
 
+        // argNames will always have same length as types
         for (int i = 0; i < types.size(); i++) {
+          String argName = argNames != null ? argNames[i] : "arg" + i;
           Type type = types.get(i);
+          ValueVector vector = ret.getChildren(argName);
 
-          if (type instanceof DBusListType) {
-            ValueVector temp = DBusMarshalling.DBusListToJolie(val[i], (DBusListType) type);
-
-            for (Value v : temp) {
-              vector.add(v);
-            }
-          } else if (type instanceof DBusMapType) {
-            vector.add(DBusMarshalling.DBusMapToJolie((Map) val[i], (DBusMapType) types.get(i)));
-          } else {
-            vector.add(DBusMarshalling.singleDBusToJolie(val[i], types.get(i)));
-          }
+          DBusMarshalling.addObjectToValueVector(val[i], type, vector);
         }
-
         return ret;
       }
+    }
+  }
+
+   private static void addObjectToValueVector(Object o, Type type, ValueVector target) {
+    if (type instanceof DBusListType) {
+      ValueVector temp = DBusMarshalling.DBusListToJolie(o, (DBusListType) type);
+
+      for (Value v : temp) {
+        target.add(v);
+      }
+    } else if (type instanceof DBusMapType) {
+      target.add(DBusMarshalling.DBusMapToJolie((Map) o, (DBusMapType) type));
+    } else {
+      target.add(DBusMarshalling.singleDBusToJolie(o, type));
     }
   }
   
