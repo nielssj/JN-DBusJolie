@@ -15,6 +15,7 @@ import java.net.URI;
 import java.text.ParseException;
 import jolie.net.ext.CommChannelFactory;
 import jolie.net.ports.InputPort;
+import jolie.net.ports.Port;
 import jolie.runtime.AndJarDeps;
 import org.freedesktop.dbus.BusAddress;
 import org.freedesktop.dbus.Message;
@@ -40,9 +41,8 @@ fieldSysPath.set( null, null );
     String connectionName = parts[0];
     String objectPath = parts[1];
 
-    DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, true);
-    channel.setIntrospectOutput(port.getInterface());
-
+    DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, true, port);
+    
     boolean nameObtained = channel.obtainName(connectionName);
     if (!nameObtained) {
       throw new RuntimeException("Could not obtain name " + connectionName + " because it was already in use");
@@ -57,12 +57,12 @@ fieldSysPath.set( null, null );
     String connectionName = parts[0];
     String objectPath = parts[1];
 
-    DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, false);
+    DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, false, port);
     
     return channel;
   }
 
-  private static DBusCommChannel create(URI location, String connectionName, String objectPath, boolean isInputPort) {
+  private static DBusCommChannel create(URI location, String connectionName, String objectPath, boolean isInputPort, Port port) {
     DBusCommChannel ret = null;
     Transport transport;
     try {
@@ -83,7 +83,7 @@ fieldSysPath.set( null, null );
     }
 
     try {
-      ret = new DBusCommChannel(transport, connectionName, objectPath, location, isInputPort);
+      ret = new DBusCommChannel(transport, connectionName, objectPath, location, isInputPort, port);
     } catch (Exception ex) {
       throw new RuntimeException("Failed to create DBusCommChannel", ex);
     }

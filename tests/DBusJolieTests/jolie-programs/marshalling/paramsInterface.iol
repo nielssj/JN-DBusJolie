@@ -13,6 +13,8 @@ type testType:void {
 }
 
 interface Params {
+	OneWay:
+		onewaymethod (int)
 	RequestResponse:
 		testParams ( testType )( testType )
 }
