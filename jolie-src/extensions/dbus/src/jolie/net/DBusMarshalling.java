@@ -29,7 +29,10 @@ import org.freedesktop.dbus.types.DBusMapType;
  * @author niels
  */
 public class DBusMarshalling {
-
+  /*
+   * GIVEN JOLIE VAUES, OBTAIN THE CORRESPONDING CLASS.
+   * Single values get their java type, maps and list get DBusMapType and DBusListType correnspondingly.
+   */
   private static Type getType(Value value) {
     Map<String, ValueVector> children = value.children();
 
@@ -104,8 +107,12 @@ public class DBusMarshalling {
   }
 
   /*
-   * Build an array of objects from a Jolie Value. Requires the name of the arguments, which means you must have introspected the object that you are calling.
-   * The length of Value.children() and argNames must match, and the keys must be the same
+   * GIVEN A JOLIE VALUE, SERIALIZE IT FOR DBUS
+   */
+  /*
+   * Serialize a Jolie Value to be sent over DBus. Requires the name of the arguments, which means you must have introspected the object that you are calling.
+   * The length of Value.children() and argNames must match, and the keys must be the same.
+   * Argnames should be sorted in the order that the remote DBus service expects them.
    */
   public static Object[] valueToDBus(Value value, String[] argNames) throws DBusException {
     ArrayList<Object> objects = new ArrayList<Object>();
@@ -133,7 +140,7 @@ public class DBusMarshalling {
   }
 
   /*
-   * Builds an array of objects and their type string from a Jolie Value. The value must be either a single root value (with no children),
+   * Serialize a Jolie Value to be sent over DBus, and create its typestring. The value must be either a single root value (with no children),
    * or the children must be named arg0, arg1, etc.
    * 
    * This should be used when you have no introspection data, i.e. no knowledge (in Jolie) of argument names and types.
@@ -206,6 +213,41 @@ public class DBusMarshalling {
     }
   }
 
+  /*
+   * SERIALIZE DATA RECIEVED OVER DBUS TO JOLIE
+   */
+  /*
+   * Given an array of objects and a DBus signature string, convert it to a Jolie Value.
+   * If the array of objects is null or empty, returns an undefined value.
+   * If the signature has a single type, return the value found at val[0] as a Jolie value
+   * If the signature has multiple types, return them as a the children of a Jolie value. If argNames
+   * is not null, those names are used, and if not the arguments will be named arg0, arg1 etc. 
+   */
+  public static Value ToJolieValue(Object[] val, String signature, String[] argNames) throws DBusException {
+    if (val == null || val.length == 0) {
+      return Value.UNDEFINED_VALUE;
+    } else {
+      List<Type> types = new ArrayList<Type>();
+      Marshalling.getJavaType(signature, types, -1);
+
+      if (types.size() == 1 && !(types.get(0) instanceof DBusListType)) {
+        return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));
+      } else {
+        Value ret = Value.create();
+
+        // argNames will always have same length as types
+        for (int i = 0; i < types.size(); i++) {
+          String argName = argNames != null ? argNames[i] : "arg" + i;
+          Type type = types.get(i);
+          ValueVector vector = ret.getChildren(argName);
+
+          DBusMarshalling.addObjectToValueVector(val[i], type, vector);
+        }
+        return ret;
+      }
+    }
+  }
+  
   private static Value singleDBusToJolie(Object val, Type t) {
     if (t instanceof DBusMapType) {
       return DBusMarshalling.DBusMapToJolie((Map) val, (DBusMapType) t);
@@ -269,38 +311,6 @@ public class DBusMarshalling {
     return v;
   }
 
-  /*
-   * Given an array of objects and a DBus signature string, convert it to a Jolie Value.
-   * If the array of objects is null or empty, returns an undefined value.
-   * If the signature has a single type, return the value found at val[0] as a Jolie value
-   * If the signature has multiple types, return them as a Jolie value with a single child
-   * named `params` which is an array. 
-   */
-  public static Value ToJolieValue(Object[] val, String signature, String[] argNames) throws DBusException {
-    if (val == null || val.length == 0) {
-      return Value.UNDEFINED_VALUE;
-    } else {
-      List<Type> types = new ArrayList<Type>();
-      Marshalling.getJavaType(signature, types, -1);
-
-      if (types.size() == 1 && !(types.get(0) instanceof DBusListType)) {
-        return DBusMarshalling.singleDBusToJolie(val[0], types.get(0));
-      } else {
-        Value ret = Value.create();
-
-        // argNames will always have same length as types
-        for (int i = 0; i < types.size(); i++) {
-          String argName = argNames != null ? argNames[i] : "arg" + i;
-          Type type = types.get(i);
-          ValueVector vector = ret.getChildren(argName);
-
-          DBusMarshalling.addObjectToValueVector(val[i], type, vector);
-        }
-        return ret;
-      }
-    }
-  }
-
   private static void addObjectToValueVector(Object o, Type type, ValueVector target) {
     if (type instanceof DBusListType) {
       ValueVector temp = DBusMarshalling.DBusListToJolie(o, (DBusListType) type);
@@ -314,22 +324,39 @@ public class DBusMarshalling {
       target.add(DBusMarshalling.singleDBusToJolie(o, type));
     }
   }
-  private static Map<jolie.lang.NativeType, java.lang.reflect.Type> jnToJavaMap;
-
-  static {
-    jnToJavaMap = new EnumMap<jolie.lang.NativeType, java.lang.reflect.Type>(jolie.lang.NativeType.class);
-    jnToJavaMap.put(NativeType.STRING, String.class);
-    jnToJavaMap.put(NativeType.INT, int.class);
-    jnToJavaMap.put(NativeType.LONG, long.class);
-    jnToJavaMap.put(NativeType.BOOL, boolean.class);
-    jnToJavaMap.put(NativeType.DOUBLE, Double.class);
-    jnToJavaMap.put(NativeType.ANY, Variant.class);
-  }
-
-  private static java.lang.reflect.Type jolieNativeTypeToJava(jolie.lang.NativeType jNType) {
-    return DBusMarshalling.jnToJavaMap.get(jNType);
-  }
-
+  
+  /* 
+   * CONVERSION OF JOLIE RUNTIME TYPES TO DBUS STRING 
+   */
+  
+  /*
+   * Given a jolie type, converts it to a map of DBus strings.
+   * 
+   * If the type is a native type, the map will have a single entry, with the key "", and the string representation of the DBus type as value
+   * 
+   * If the type is a complex type (i.e., if it has subtypes), then a map is returned, mapping the key of these subtypes, to the DBus string type.
+   * Example:
+   * A native type int is mapped to
+   * { "" => "i" }
+   * 
+   * A complex type
+   * {
+   *    .field1: int
+   *    .field2[1,2]: long
+   *    .field3:void {
+   *      .subfield1: string.
+   *      .subfield2: string
+   *    }
+   * }
+   * is mapped to
+   * {
+   *    field1: "i",
+   *    field2: "ax",
+   *    field3: "a{ss}"
+   * }
+   * 
+   * Note that fields (the outermost layer of the type), can have different type, but subfields must be of the same type.
+   */
   public static Map<String, String> jolieTypeToDBusString(jolie.runtime.typing.Type jType) throws DBusException {
     Map<String, String> types = new HashMap<String, String>();
     java.lang.reflect.Type[] javaType;
@@ -343,10 +370,12 @@ public class DBusMarshalling {
         types.put(st.getKey(), Marshalling.getDBusType(javaType));
       }
     } else {
-      javaType = new java.lang.reflect.Type[]{
-        DBusMarshalling.jolieNativeTypeToJava(jType.nativeType())
-      };
-      types.put("", Marshalling.getDBusType(javaType));
+      if (jType.nativeType() != NativeType.VOID) {
+        javaType = new java.lang.reflect.Type[]{
+          DBusMarshalling.jolieNativeTypeToJava(jType.nativeType())
+        };
+        types.put("", Marshalling.getDBusType(javaType));
+      }
     }
 
     return types;
@@ -389,12 +418,28 @@ public class DBusMarshalling {
             throw new RuntimeException("DBus maps does not support several types. Trying to add " + nextType + " to an map of " + type);
           }
         }
-        
+
         return new DBusMapType(String.class, type);
       } else {
         // Make map type string
         return jolieNativeTypeToJava(jType.nativeType());
       }
     }
+  }
+  
+  private static final Map<jolie.lang.NativeType, java.lang.reflect.Type> jnToJavaMap;
+
+  static {
+    jnToJavaMap = new EnumMap<jolie.lang.NativeType, java.lang.reflect.Type>(jolie.lang.NativeType.class);
+    jnToJavaMap.put(NativeType.STRING, String.class);
+    jnToJavaMap.put(NativeType.INT, int.class);
+    jnToJavaMap.put(NativeType.LONG, long.class);
+    jnToJavaMap.put(NativeType.BOOL, boolean.class);
+    jnToJavaMap.put(NativeType.DOUBLE, Double.class);
+    jnToJavaMap.put(NativeType.ANY, Variant.class);
+  }
+
+  private static java.lang.reflect.Type jolieNativeTypeToJava(jolie.lang.NativeType jNType) {
+    return DBusMarshalling.jnToJavaMap.get(jNType);
   }
 }
