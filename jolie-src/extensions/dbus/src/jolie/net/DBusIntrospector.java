@@ -38,6 +38,7 @@ import org.freedesktop.dbus.exceptions.DBusException;
  * @author jan
  */
 public class DBusIntrospector {
+
   private final String objectPath;
   private final String connectionName;
   // Output port  - The signatures of remote methods, aquired by calling IntrospectInput on the remote object
@@ -50,13 +51,13 @@ public class DBusIntrospector {
   // Input port   - The names of the arguments in a method return that should be sent to remote callers
   protected final Map<String, String[]> responseArgs = new HashMap<String, String[]>();
   private final DBusCommChannel channel;
-  
+
   public DBusIntrospector(String objectPath, String connectionName, DBusCommChannel channel) {
     this.objectPath = objectPath;
     this.connectionName = connectionName;
     this.channel = channel;
   }
-  
+
   /*
    * InputPort: Prepare an introspection string to be returned upon incoming introspection requests.
    */
@@ -138,12 +139,12 @@ public class DBusIntrospector {
         Element elmMethod = doc.createElement("method");
         elmMethod.setAttribute("name", owoName);
         elmInterface.appendChild(elmMethod);
-        
+
         Element noReplyAnnotation = doc.createElement("annotation");
         noReplyAnnotation.setAttribute("name", "org.freedesktop.DBus.Method.NoReply");
         noReplyAnnotation.setAttribute("value", "true");
         elmMethod.appendChild(noReplyAnnotation);
-                
+
         // Request arg(s)
         Map<String, String> reqTypes = DBusMarshalling.jolieTypeToDBusString(owoDesc.requestType());
         for (String argName : reqTypes.keySet()) {
@@ -190,7 +191,7 @@ public class DBusIntrospector {
       // Log warning instead?
     }
   }
-  
+
   /*
    * OutputPort: Retrieve and parse introspection data of the D-Bus object at the port location
    */
@@ -213,16 +214,21 @@ public class DBusIntrospector {
       DocumentBuilder b = factory.newDocumentBuilder();
 
       Document d = b.parse(new ByteArrayInputStream(xml.getBytes()));
-      
+
       // A remote DBus connection may expose several objects, but jolie only allows you to connect to one of those object per
       // output port. This is because each object may expose the same method.
       Node node = null;
       NodeList nodes = d.getElementsByTagName("node");
       for (int j = 0; j < nodes.getLength(); j++) {
-        if (nodes.item(j).getAttributes().getNamedItem("name").getNodeValue().equals(this.objectPath)) node = nodes.item(j); break;
+        if (nodes.item(j).getAttributes().getNamedItem("name").getNodeValue().equals(this.objectPath)) {
+          node = nodes.item(j);
+        }
+        break;
       }
-      if (node == null) throw new RuntimeException("The remote D-Bus object supports introspection, but does not expose any object with the path " + this.objectPath);
-      
+      if (node == null) {
+        throw new RuntimeException("The remote D-Bus object supports introspection, but does not expose any object with the path " + this.objectPath);
+      }
+
       NodeList methods = d.getElementsByTagName("method");
       for (int i = 0; i < methods.getLength(); i++) {
         Node method = methods.item(i);
@@ -245,7 +251,7 @@ public class DBusIntrospector {
             Node argName = attributes.getNamedItem("name");
             if (attributes.getNamedItem("direction").getNodeValue().equals("in")) {
               signature += attributes.getNamedItem("type").getNodeValue();
-              
+
               inputArgCount++;
               if (argName == null || argName.getNodeValue().equals("")) {
                 argsHaveNames = false;

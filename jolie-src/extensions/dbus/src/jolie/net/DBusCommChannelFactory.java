@@ -28,12 +28,12 @@ public class DBusCommChannelFactory extends CommChannelFactory {
 
   public DBusCommChannelFactory(CommCore commCore) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super(commCore);
-    
-    System.setProperty( "java.library.path", "/usr/local/lib/jni" );
- 
-Field fieldSysPath = ClassLoader.class.getDeclaredField( "sys_paths" );
-fieldSysPath.setAccessible( true );
-fieldSysPath.set( null, null );
+
+    System.setProperty("java.library.path", "/usr/local/lib/jni");
+
+    Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+    fieldSysPath.setAccessible(true);
+    fieldSysPath.set(null, null);
   }
 
   public static DBusCommChannel createChannel(URI location, InputPort port) throws DBusException, IOException {
@@ -42,7 +42,7 @@ fieldSysPath.set( null, null );
     String objectPath = parts[1];
 
     DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, true, port);
-    
+
     boolean nameObtained = channel.obtainName(connectionName);
     if (!nameObtained) {
       throw new RuntimeException("Could not obtain name " + connectionName + " because it was already in use");
@@ -58,7 +58,7 @@ fieldSysPath.set( null, null );
     String objectPath = parts[1];
 
     DBusCommChannel channel = DBusCommChannelFactory.create(location, connectionName, objectPath, false, port);
-    
+
     return channel;
   }
 
