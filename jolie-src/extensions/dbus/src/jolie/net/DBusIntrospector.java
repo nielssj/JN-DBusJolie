@@ -23,7 +23,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-
 import jolie.net.ports.Interface;
 import jolie.runtime.Value;
 import jolie.runtime.typing.OneWayTypeDescription;
@@ -38,7 +37,7 @@ import org.freedesktop.dbus.exceptions.DBusException;
  *
  * @author jan
  */
-public class DBusIntrospecter {
+public class DBusIntrospector {
   private final String objectPath;
   private final String connectionName;
   // Output port  - The signatures of remote methods, aquired by calling IntrospectInput on the remote object
@@ -52,7 +51,7 @@ public class DBusIntrospecter {
   protected final Map<String, String[]> responseArgs = new HashMap<String, String[]>();
   private final DBusCommChannel channel;
   
-  public DBusIntrospecter(String objectPath, String connectionName, DBusCommChannel channel) {
+  public DBusIntrospector(String objectPath, String connectionName, DBusCommChannel channel) {
     this.objectPath = objectPath;
     this.connectionName = connectionName;
     this.channel = channel;
@@ -193,7 +192,7 @@ public class DBusIntrospecter {
   }
   
   /*
-   * OutputPort: Retreive and parse introspection data of the D-Bus object at the port location
+   * OutputPort: Retrieve and parse introspection data of the D-Bus object at the port location
    */
   protected boolean IntrospectInput() throws DBusException, IOException, ParserConfigurationException, SAXException {
     MethodCall m = new MethodCall(
@@ -213,10 +212,18 @@ public class DBusIntrospecter {
       DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
       DocumentBuilder b = factory.newDocumentBuilder();
 
-      InputStream is = new ByteArrayInputStream(xml.getBytes());
-      Document d = b.parse(is);
+      Document d = b.parse(new ByteArrayInputStream(xml.getBytes()));
+      
+      // A remote DBus connection may expose several objects, but jolie only allows you to connect to one of those object per
+      // output port. This is because each object may expose the same method.
+      Node node = null;
+      NodeList nodes = d.getElementsByTagName("node");
+      for (int j = 0; j < nodes.getLength(); j++) {
+        if (nodes.item(j).getAttributes().getNamedItem("name").getNodeValue().equals(this.objectPath)) node = nodes.item(j); break;
+      }
+      if (node == null) throw new RuntimeException("The remote D-Bus object supports introspection, but does not expose any object with the path " + this.objectPath);
+      
       NodeList methods = d.getElementsByTagName("method");
-
       for (int i = 0; i < methods.getLength(); i++) {
         Node method = methods.item(i);
 
@@ -238,8 +245,8 @@ public class DBusIntrospecter {
             Node argName = attributes.getNamedItem("name");
             if (attributes.getNamedItem("direction").getNodeValue().equals("in")) {
               signature += attributes.getNamedItem("type").getNodeValue();
+              
               inputArgCount++;
-
               if (argName == null || argName.getNodeValue().equals("")) {
                 argsHaveNames = false;
               } else {

@@ -125,7 +125,6 @@ public class DBusMarshalling {
         objects.add(valObj);
       }
     } else {
-      // We need to use sets here, since the order of the argument names does not matter
       if (!children.keySet().equals(new HashSet<String>(Arrays.asList(argNames)))) {
         throw new RuntimeException("Trying to pass an object with keys " + children.keySet() + " to a method expecting " + Arrays.deepToString(argNames));
       }
@@ -272,8 +271,6 @@ public class DBusMarshalling {
       return Value.create((Boolean) val);
     } else if (t.equals(Double.class)) {
       return Value.create((Double) val);
-    } else if (t.equals(Long.class)) {
-      return Value.create((Long) val);
     } else {
       throw new RuntimeException("Cannot translate DBus value to Jolie" + t);
     }
@@ -318,8 +315,6 @@ public class DBusMarshalling {
       for (Value v : temp) {
         target.add(v);
       }
-    } else if (type instanceof DBusMapType) {
-      target.add(DBusMarshalling.DBusMapToJolie((Map) o, (DBusMapType) type));
     } else {
       target.add(DBusMarshalling.singleDBusToJolie(o, type));
     }
@@ -355,7 +350,9 @@ public class DBusMarshalling {
    *    field3: "a{ss}"
    * }
    * 
-   * Note that fields (the outermost layer of the type), can have different type, but subfields must be of the same type.
+   * Note that fields (the outermost layer of the type), can have different types, but subfields must be of the same type.
+   * This means that in the above example, field1 and field2 does not need to have the same type, but subfield1 and subfield2 must
+   * be of the same type.
    */
   public static Map<String, String> jolieTypeToDBusString(jolie.runtime.typing.Type jType) throws DBusException {
     Map<String, String> types = new HashMap<String, String>();
@@ -405,7 +402,7 @@ public class DBusMarshalling {
         return new DBusListType(elementType);
       }
     } else {
-      // Is it a native type or deeper tree structure?
+      // Is it a deeper tree structure?
       if (jType.subTypeSet().size() > 0) {
         Set<Entry<String, jolie.runtime.typing.Type>> subtypes = jType.subTypeSet();
 
@@ -421,7 +418,7 @@ public class DBusMarshalling {
 
         return new DBusMapType(String.class, type);
       } else {
-        // Make map type string
+        // Native type
         return jolieNativeTypeToJava(jType.nativeType());
       }
     }

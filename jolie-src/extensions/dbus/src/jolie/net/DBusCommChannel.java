@@ -47,7 +47,7 @@ public class DBusCommChannel extends CommChannel {
   private ConcurrentHashMap<Long, Message> sentMessages;
   // Outputport interface as an introspection (XML) string
   protected Object[] introspectionOutput;
-  private final DBusIntrospecter introspector;
+  private final DBusIntrospector introspector;
 
   public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort, Port port)
           throws IOException, ParseException, DBusException, ParserConfigurationException, SAXException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
@@ -63,7 +63,7 @@ public class DBusCommChannel extends CommChannel {
     this.isInputPort = isInputPort;
 
     // Retreive introspection data (OutputPort only)
-    this.introspector = new DBusIntrospecter(objectPath, connectionName, this);
+    this.introspector = new DBusIntrospector(objectPath, connectionName, this);
     if (this.isInputPort) {
       this.introspectionOutput = this.introspector.setIntrospectOutput(port.getInterface());
     } else {
