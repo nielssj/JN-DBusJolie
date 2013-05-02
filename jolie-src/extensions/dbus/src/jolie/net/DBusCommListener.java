@@ -5,12 +5,12 @@ import jolie.Interpreter;
 import jolie.net.ports.InputPort;
 import org.freedesktop.dbus.exceptions.DBusException;
 
-public class DBusListener extends CommListener implements Runnable {
+public class DBusCommListener extends CommListener implements Runnable {
 
   private InputPort port;
   private DBusCommChannel channel;
 
-  public DBusListener(Interpreter interpreter, InputPort inputPort) {
+  public DBusCommListener(Interpreter interpreter, InputPort inputPort) {
     super(interpreter, inputPort);
     this.port = inputPort;
   }
