@@ -403,7 +403,8 @@ public class DBusMarshalling {
       }
     } else {
       // Is it a deeper tree structure?
-      if (jType.subTypeSet().size() > 0) {
+      Set subTypeSet = jType.subTypeSet();
+      if (subTypeSet != null && subTypeSet.size() > 0) {
         Set<Entry<String, jolie.runtime.typing.Type>> subtypes = jType.subTypeSet();
 
         java.lang.reflect.Type type = null;
