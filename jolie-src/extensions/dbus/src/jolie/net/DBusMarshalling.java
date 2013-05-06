@@ -271,6 +271,9 @@ public class DBusMarshalling {
       return Value.create((Boolean) val);
     } else if (t.equals(Double.class)) {
       return Value.create((Double) val);
+    } else if (t.equals(Variant.class)) {
+      Variant v = (Variant) val;
+      return DBusMarshalling.singleDBusToJolie(v.getValue(), v.getType());
     } else {
       throw new RuntimeException("Cannot translate DBus value to Jolie" + t);
     }
@@ -359,7 +362,8 @@ public class DBusMarshalling {
     java.lang.reflect.Type[] javaType;
 
     // Is it a complex type?
-    if (jType.subTypeSet().size() > 0) {
+    Set subTypeSet = jType.subTypeSet();
+    if (subTypeSet != null && subTypeSet.size() > 0) {
       // Loop through sub-types 
       for (Entry<String, jolie.runtime.typing.Type> st : jType.subTypeSet()) {
         javaType = new java.lang.reflect.Type[]{DBusMarshalling.jolieTypeToJava(st.getValue())};
