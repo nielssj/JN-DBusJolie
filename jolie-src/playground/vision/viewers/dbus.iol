@@ -1,5 +1,5 @@
 type ListOfNames:void {
-	.params[1,*]:undefined
+	.arg0[1,*]: string
 }
 
 interface DBusInterface {
