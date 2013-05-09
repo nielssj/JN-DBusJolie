@@ -9,5 +9,5 @@ outputPort TwiceService {
 main
 {
 	{ twice@TwiceService( 5 )( response ) | twice@TwiceService( 7 )( response2 ) };
-	print@Console(response + response2)()
+	print@Console(response + response2 + "\n")()
 }
