@@ -29,8 +29,10 @@ public class DBusCommListener extends CommListener implements Runnable {
     // Create comm channel
     try {
       channel = DBusCommChannelFactory.createChannel(port.location(), port);
-    } catch (Exception ex) {
-      throw new RuntimeException("Failed to create comm channel for InputPort", ex);
+    } catch (DBusException ex) {
+      throw new RuntimeException("Failed to create comm channel for InputPort "+ex.getMessage(), ex);
+    } catch (IOException ex) {
+      throw new RuntimeException("Failed to create comm channel for InputPort "+ex.getMessage(), ex);
     }
 
     // Start listening for method calls till shutdown is called

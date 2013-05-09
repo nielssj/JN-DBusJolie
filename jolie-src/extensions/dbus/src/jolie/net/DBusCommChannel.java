@@ -91,6 +91,8 @@ public class DBusCommChannel extends CommChannel {
         }
 
         return false;
+      } else if (m instanceof Error) {
+        return false;
       }
     }
   }
