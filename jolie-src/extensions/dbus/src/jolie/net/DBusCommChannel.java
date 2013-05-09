@@ -91,6 +91,8 @@ public class DBusCommChannel extends CommChannel {
         }
 
         return false;
+      } else if (m instanceof Error) {
+        return false;
       }
     }
   }
@@ -163,7 +165,7 @@ public class DBusCommChannel extends CommChannel {
         // Response to method call (InputPort)
         if (!message.isFault()) {
           typeString = this.introspector.signatures.get(message.operationName());
-          String[] argNames = this.introspector.requestArgs.get(message.operationName());
+          String[] argNames = this.introspector.responseArgs.get(message.operationName());
           values = DBusMarshalling.valueToDBus(message.value(), argNames);
 
           m = new MethodReturn(
@@ -227,7 +229,7 @@ public class DBusCommChannel extends CommChannel {
             System.out.printf("recvimpl - is MethodCall, marshalling to Jolie CommMessage: %s\n", msg);
           }
 
-          Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspector.responseArgs.get(msg.getName()));
+          Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspector.requestArgs.get(msg.getName()));
           CommMessage cmsg = new CommMessage(msg.getSerial(), msg.getName(), "/", val, null);
 
           if (TRACE) {

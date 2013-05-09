@@ -74,7 +74,7 @@ public class DBusIntrospector {
 
       // Create interface element
       Element elmInterface = doc.createElement("interface");
-      elmInterface.setAttribute("name", this.connectionName);
+      elmInterface.setAttribute("name", this.connectionName.replace("-", "")); // Bus names can hyphens, but interface names cannot.
       elmRoot.appendChild(elmInterface);
 
       // Create req/res-method elements

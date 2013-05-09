@@ -45,7 +45,7 @@ public class DBusCommChannelFactory extends CommChannelFactory {
 
     boolean nameObtained = channel.obtainName(connectionName);
     if (!nameObtained) {
-      throw new RuntimeException("Could not obtain name " + connectionName + " because it was already in use");
+      throw new RuntimeException(String.format("Could not obtain bus name '%s' because it was already in use or malformed", connectionName));
     }
 
     return channel;
@@ -100,10 +100,10 @@ public class DBusCommChannelFactory extends CommChannelFactory {
       if (parts.length == 2) {
         return parts;
       } else {
-        throw new RuntimeException("Malformed location string, should be dbus:/[connection name]:[object path] but was: " + location);
+        throw new RuntimeException("Malformed location string, should be dbus:/[bus name]:[object path] but was: " + location);
       }
     } else {
-      throw new RuntimeException("Malformed location string " + location);
+      throw new RuntimeException("Malformed location string, should be dbus:/[bus name]:[object path] but was: " + location);
     }
   }
 }
