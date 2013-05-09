@@ -12,7 +12,7 @@ main
 	argument.vArray[0] = 0;
 	argument.vArray[1] = "John";
 	argument.longMapArray[0].long1 = 1L;
-	argument.longMapArray[0].long2 = 2L;
+	argument.longMapArray[0].long2 = 2L;	
 	argument.longMapArray[1].long1 = 3L;
 	argument.longMapArray[1].long2 = 4L;
 

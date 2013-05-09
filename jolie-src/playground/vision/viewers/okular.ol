@@ -65,9 +65,9 @@ define initDocumentViewer
 {
 	o = 0;
 	ListNames@DBus ( ) ( names );
-	for (i = 0, i < #names.params, i++)
+	for (i = 0, i < #names.arg0, i++)
 	{
-		name = names.params[i];
+		name = names.arg0[i];
 		name.prefix = "org.kde.okular-";
 		startsWith@StringUtils ( name ) ( swres );
 		if ( swres ) {

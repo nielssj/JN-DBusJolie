@@ -215,20 +215,7 @@ public class DBusIntrospector {
 
       Document d = b.parse(new ByteArrayInputStream(xml.getBytes()));
 
-      // A remote DBus connection may expose several objects, but jolie only allows you to connect to one of those object per
-      // output port. This is because each object may expose the same method.
-      Node node = null;
-      NodeList nodes = d.getElementsByTagName("node");
-      for (int j = 0; j < nodes.getLength(); j++) {
-        if (nodes.item(j).getAttributes().getNamedItem("name").getNodeValue().equals(this.objectPath)) {
-          node = nodes.item(j);
-        }
-        break;
-      }
-      if (node == null) {
-        throw new RuntimeException("The remote D-Bus object supports introspection, but does not expose any object with the path " + this.objectPath);
-      }
-
+      Node node = d.getElementsByTagName("node").item(0);
       NodeList methods = d.getElementsByTagName("method");
       for (int i = 0; i < methods.getLength(); i++) {
         Node method = methods.item(i);

@@ -23,5 +23,5 @@ include "exec.iol"
 
 main
 {
-	exec@Exec( "kdialog --getopenfilename \"Please select a presentation...\" "
+	exec@Exec( "kdialog --getopenfilename \"Please select a presentation...\" " )()
 }
