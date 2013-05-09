@@ -100,7 +100,7 @@ public class DBusCommChannel extends CommChannel {
   // Blocking: Listen untill a message is received
   public boolean listen() throws IOException, DBusException {
     Message m = transport.min.readMessage();
-
+    
     if (m.getName().equals("Introspect")) {
       this.respondToIntrospection(m);
       return false;

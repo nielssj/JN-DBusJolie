@@ -74,7 +74,7 @@ public class DBusIntrospector {
 
       // Create interface element
       Element elmInterface = doc.createElement("interface");
-      elmInterface.setAttribute("name", this.connectionName.replace("-", "")); // Bus names can hyphens, but interface names cannot.
+      elmInterface.setAttribute("name", this.connectionName.replace("-", "")); // Bus names can hyphens, but interface names cannot.  
       elmRoot.appendChild(elmInterface);
 
       // Create req/res-method elements
@@ -123,7 +123,7 @@ public class DBusIntrospector {
         for (String s : respTypes.values()) {
           signature.append(s);
         }
-
+        
         this.signatures.put(rroName, signature.toString());
         this.requestArgs.put(rroName, requestArgNames.toArray(new String[requestArgNames.size()]));
         this.responseArgs.put(rroName, responseArgNames.toArray(new String[responseArgNames.size()]));

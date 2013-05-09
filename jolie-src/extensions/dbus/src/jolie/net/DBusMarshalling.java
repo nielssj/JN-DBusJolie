@@ -33,6 +33,7 @@ public class DBusMarshalling {
    * GIVEN JOLIE VAUES, OBTAIN THE CORRESPONDING CLASS.
    * Single values get their java type, maps and list get DBusMapType and DBusListType correnspondingly.
    */
+
   private static Type getType(Value value) {
     Map<String, ValueVector> children = value.children();
 
@@ -47,12 +48,12 @@ public class DBusMarshalling {
 
       for (Entry<String, ValueVector> e : children.entrySet()) {
         nextType = DBusMarshalling.getValueVectorType(e.getValue());
-        if (type != null) {
-          if (!DBusMarshalling.typesMatch(type, nextType)) {
-            throw new RuntimeException("DBus maps does not support several types. Trying to add " + nextType + " to an map of " + type);
-          }
-        } else {
+        if (type == null) {
           type = nextType;
+        } else if (!DBusMarshalling.typesMatch(type, nextType)) {
+          // We know the map contains several different types, no need to look further
+          type = Variant.class;
+          break;
         }
       }
 
@@ -67,12 +68,11 @@ public class DBusMarshalling {
 
       for (Value v : vector) {
         nextType = DBusMarshalling.getType(v);
-        if (type != null) {
-          if (!DBusMarshalling.typesMatch(type, nextType)) {
-            throw new RuntimeException("DBus arrays does not support several types. Trying to add " + nextType + " to an array of " + type);
-          }
-        } else {
+        if (type == null) {
           type = nextType;
+        } else if (!DBusMarshalling.typesMatch(type, nextType)) {
+          type = Variant.class;
+          break;
         }
       }
 
@@ -166,10 +166,10 @@ public class DBusMarshalling {
         if (name.indexOf("arg") == -1) {
           throw new RuntimeException("Values given to non-introspectable types must be of the form arg0, arg1 etc.");
         } else {
-          for (Value v : children.get(name)) {
-            objects.add(DBusMarshalling.valueToDBus(v));
-            types.add(DBusMarshalling.getType(v));
-          }
+          ValueVector vv = children.get(name);
+
+          objects.add(DBusMarshalling.valueVectorToDBus(vv));
+          types.add(DBusMarshalling.getValueVectorType(vv));
         }
       }
     }
@@ -246,7 +246,7 @@ public class DBusMarshalling {
       }
     }
   }
-  
+
   private static Value singleDBusToJolie(Object val, Type t) {
     if (t instanceof DBusMapType) {
       return DBusMarshalling.DBusMapToJolie((Map) val, (DBusMapType) t);
@@ -322,11 +322,10 @@ public class DBusMarshalling {
       target.add(DBusMarshalling.singleDBusToJolie(o, type));
     }
   }
-  
+
   /* 
    * CONVERSION OF JOLIE RUNTIME TYPES TO DBUS STRING 
    */
-  
   /*
    * Given a jolie type, converts it to a map of DBus strings.
    * 
@@ -383,9 +382,9 @@ public class DBusMarshalling {
   }
 
   private static java.lang.reflect.Type jolieTypeToJava(jolie.runtime.typing.Type jType) {
-    // Is it an array?
     if (jType.cardinality().max() > 1) {
-      if (jType.subTypeSet().size() > 0) {
+      // It is an array
+      if (jType.subTypeSet() != null && jType.subTypeSet().size() > 0) {
         // Is it an array of complex types?
         Set<Entry<String, jolie.runtime.typing.Type>> subtypes = jType.subTypeSet();
 
@@ -395,7 +394,8 @@ public class DBusMarshalling {
           if (type == null) {
             type = nextType;
           } else if (!DBusMarshalling.typesMatch(type, nextType)) {
-            throw new RuntimeException("DBus maps does not support several types. Trying to add " + nextType + " to an map of " + type);
+            type = Variant.class;
+            break;
           }
         }
 
@@ -405,30 +405,27 @@ public class DBusMarshalling {
         java.lang.reflect.Type elementType = DBusMarshalling.jolieNativeTypeToJava(jType.nativeType());
         return new DBusListType(elementType);
       }
-    } else {
-      // Is it a deeper tree structure?
-      Set subTypeSet = jType.subTypeSet();
-      if (subTypeSet != null && subTypeSet.size() > 0) {
-        Set<Entry<String, jolie.runtime.typing.Type>> subtypes = jType.subTypeSet();
+    } else if (jType.subTypeSet() != null && jType.subTypeSet().size() > 0) {
+      // It is a deeper tree structure
+      Set<Entry<String, jolie.runtime.typing.Type>> subtypes = jType.subTypeSet();
 
-        java.lang.reflect.Type type = null;
-        for (Entry<String, jolie.runtime.typing.Type> e : subtypes) {
-          java.lang.reflect.Type nextType = DBusMarshalling.jolieTypeToJava(e.getValue());
-          if (type == null) {
-            type = nextType;
-          } else if (!DBusMarshalling.typesMatch(type, nextType)) {
-            throw new RuntimeException("DBus maps does not support several types. Trying to add " + nextType + " to an map of " + type);
-          }
+      java.lang.reflect.Type type = null;
+      for (Entry<String, jolie.runtime.typing.Type> e : subtypes) {
+        java.lang.reflect.Type nextType = DBusMarshalling.jolieTypeToJava(e.getValue());
+        if (type == null) {
+          type = nextType;
+        } else if (!DBusMarshalling.typesMatch(type, nextType)) {
+          type = Variant.class;
+          break;
         }
-
-        return new DBusMapType(String.class, type);
-      } else {
-        // Native type
-        return jolieNativeTypeToJava(jType.nativeType());
       }
+
+      return new DBusMapType(String.class, type);
+    } else {
+      // It is a native type
+      return jolieNativeTypeToJava(jType.nativeType());
     }
   }
-  
   private static final Map<jolie.lang.NativeType, java.lang.reflect.Type> jnToJavaMap;
 
   static {
