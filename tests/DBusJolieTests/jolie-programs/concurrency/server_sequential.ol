@@ -1,3 +1,4 @@
+include "console.iol"
 include "TwiceInterface.iol"
 
 inputPort TwiceService {
@@ -6,6 +7,11 @@ inputPort TwiceService {
 }
 
 execution { sequential }
+
+init
+{
+	print@Console("listening..\n")()
+}
 
 main
 {

@@ -64,6 +64,23 @@ public class JolieSubProcess
         
         return exitValue;
     }
+    
+    public String getOutputLine() {
+        DataInputStream in = new DataInputStream(process.getInputStream()); 
+        BufferedReader br = new BufferedReader(new InputStreamReader(in));
+        String line;
+        
+        try 
+        {
+            line = br.readLine();
+        }
+        catch (IOException ex)
+        {
+            throw new RuntimeException("Failed to read output of process", ex);
+        }
+        
+        return line;
+    }
 
     public String getOutput()
     {

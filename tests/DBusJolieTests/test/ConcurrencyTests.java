@@ -69,6 +69,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.join();
@@ -86,6 +87,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.stop();
@@ -103,6 +105,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.stop();
@@ -120,6 +123,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.join();
@@ -139,6 +143,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.stop();
@@ -156,6 +161,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.stop();
@@ -173,6 +179,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.join();
@@ -191,6 +198,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.stop();
@@ -208,6 +216,7 @@ public class ConcurrencyTests {
         
         // Act 
         server.start();
+        server.getOutputLine(); // (Blocking) Wait for first output
         client.start();
         client.join();
         server.stop();
