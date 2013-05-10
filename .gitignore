@@ -6,3 +6,4 @@ private.xml
 *.*~
 /tests/DBusJolieTests/nbproject/private/
 /jolie-src/libjolie/nbproject/private/
+/jolie-src/extensions/soap/nbproject/private/
