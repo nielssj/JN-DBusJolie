@@ -12,7 +12,7 @@ type testType:void {
 	.intArray[1, 2]: int
 }
 
-interface Params {
+interface Complex {
 	OneWay:
 		onewaymethod (int)
 	RequestResponse:

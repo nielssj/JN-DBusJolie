@@ -10,15 +10,14 @@ import jolie.runtime.AndJarDeps;
 
 @AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusCommListenerFactory extends CommListenerFactory {
-
   public DBusCommListenerFactory(CommCore commCore) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super(commCore);
-    
-    System.setProperty("java.library.path", "/usr/local/lib/jni");
 
-    Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
-    fieldSysPath.setAccessible(true);
-    fieldSysPath.set(null, null);
+     System.setProperty("java.library.path", "/usr/local/lib/jni");
+
+     Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+     fieldSysPath.setAccessible(true);
+     fieldSysPath.set(null, null);
   }
 
   public CommListener createListener(
