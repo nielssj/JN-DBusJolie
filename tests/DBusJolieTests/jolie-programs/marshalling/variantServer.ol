@@ -6,8 +6,6 @@ inputPort VariantServer {
 	Interfaces: Variant
 }
 
-execution { sequential }
-
 main
 {
 	[ testVariant ( request ) ( response )  {

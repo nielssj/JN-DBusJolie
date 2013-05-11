@@ -1,3 +1,6 @@
+
+import net.jolie.test.JolieToJava;
+import org.freedesktop.dbus.DBusConnection;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -33,51 +36,97 @@ public class MarshallingTests {
     System.setSecurityManager(null);
   }
 
-  @Test
   /*
    * Checks for handling of simple types. The client calls a method on the server,
    * and checks that it gets the right return value.
    */
-  public void simpleTypeTest() throws Exception {
+  @Test
+  public void simpleTypesTest() throws Exception {
     // Arrange
     JolieSubProcess server = new JolieSubProcess(jpf + "/marshalling/simpleTypesServer.ol", defaultArgs);
     JolieSubProcess client = new JolieSubProcess(jpf + "/marshalling/simpleTypesClient.ol", defaultArgs);
 
     // Act 
     server.start();
+    Thread.sleep(500);
+    
     client.start();
     client.join();
-    server.stop();
 
     // Assert
     assertEquals("PassedPassedPassed", client.getOutput());
+
+    server.stop();
   }
 
   @Test
   /*
-   * Check that everything given to `.params` is handled correctly. Sends an object containing simple types,
-   * a map type and and array type to the server, which checks that everything is correct. The server then sends
-   * the request back to the client, which checks that it is still correct.
+   * Checks that complex data types are handled correctly
    */
-  public void paramsTest() throws Exception {
+  public void complexTypesTest() throws Exception {
     // Arrange
     JolieSubProcess server = new JolieSubProcess(jpf + "/marshalling/complexTypesServer.ol", defaultArgs);
     JolieSubProcess client = new JolieSubProcess(jpf + "/marshalling/complexTypesClient.ol", defaultArgs);
 
     // Act 
     server.start();
+    Thread.sleep(500);
+    
     client.start();
     client.join();
-    
-    
-    
-    
-    // Assert
-    assertTrue(true);
-    System.out.println(client.getOutput());
-    System.out.println(server.getOutput());
-    //assertEquals("PassedPassedPassedPassedPassedPassedPassedPassedPassedPassed", client.getOutput());
-    //assertEquals("PassedPassedPassedPassedPassedPassedPassedPassedPassedPassed", server.getOutput());
 
+    // Assert
+    assertEquals("PassedPassedPassedPassedPassedPassedPassedPassedPassedPassed", client.getOutput());
+    assertEquals("PassedPassedPassedPassedPassedPassedPassedPassedPassedPassed", server.getOutput());
+  }
+
+  @Test
+  /*
+   * Checks that complex data types are handled correctly, even though their datatype is undefined / variant
+   */
+  public void variantTest() throws Exception {
+    // Arrange
+    JolieSubProcess server = new JolieSubProcess(jpf + "/marshalling/variantServer.ol", defaultArgs);
+    JolieSubProcess client = new JolieSubProcess(jpf + "/marshalling/variantClient.ol", defaultArgs);
+
+    // Act 
+    server.start();
+    Thread.sleep(500);
+    
+    client.start();
+    client.join();
+
+    // Assert
+    assertEquals("PassedPassedPassedPassedPassedPassedPassed", client.getOutput());
+    assertEquals("PassedPassedPassedPassedPassedPassedPassed", server.getOutput());
+  }
+
+  @Test
+  /*
+   * Check that Jolie can send a message to Java with multiple parameters
+   */
+  public void jolieToJavaTest() throws Exception {
+    DBusConnection conn = DBusConnection.getConnection(DBusConnection.SESSION);
+    conn.requestBusName("net.jolie.test");
+
+    conn.exportObject("/Test", new JolieToJava() {
+      @Override
+      public String concat(String s1, String s2) {
+        assertEquals(s1, "Hello");
+        assertEquals(s2, "World");
+        return s1 + s2;
+      }
+
+      @Override
+      public boolean isRemote() {
+        return false;
+      }
+    });
+
+    JolieSubProcess client = new JolieSubProcess(jpf + "/marshalling/jolieToJava.ol", defaultArgs);
+    client.start();
+    client.join();
+
+    assertEquals("HelloWorld", client.getOutput());
   }
 }
