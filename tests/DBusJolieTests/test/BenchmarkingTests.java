@@ -3,12 +3,17 @@
  * and open the template in the editor.
  */
 
+import java.io.IOException;
 import org.junit.*;
 import static org.junit.Assert.*;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.MemoryHandler;
 import jolie.lang.NativeType;
 import jolie.net.CommChannel;
 import jolie.net.CommMessage;
@@ -30,21 +35,137 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
  * @author niels
  */
 public class BenchmarkingTests {
+    private static String[] defaultArgs;
+    private static String jpf;
     
     @BeforeClass
     public static void setUpClass() { 
-        // ???
+        jpf = "jolie-programs/concurrency/";
+        defaultArgs = new String[] {
+            "-i", "../../jolie-src/include", 
+            "-l", "../../jolie-src/javaServices/coreJavaServices/dist/coreJavaServices.jar",
+            "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar",
+            "-l", "../../jolie-src/lib/xsom/dist",
+            "-l", "../../jolie-src/lib/jolie-xml/dist", 
+            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/libmatthew",
+            "-l", "../../jolie-src/lib/dbus-java" 
+        };
     }
     
     @Before
     public void setUp() {
-        // ???
+        System.setSecurityManager(new NoExitSecurityManager());
     }
     
     @After
     public void tearDown() {
-        // ???
-    }    
+        System.setSecurityManager(null);
+    }
+    
+    @Test
+    public void sendTiny() throws Exception {
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess(jpf+"server_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread(jpf+"client_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "sendImpl - Called", 
+                "sendImpl - Returned succesfully"
+            }, 
+            "sendTiny.csv");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    @Test
+    public void recvTiny() throws Exception {
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess(jpf+"server_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread(jpf+"client_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "recvResponseFor - Found matching response", 
+                "recvResponseFor - Returned succesfully"
+            }, 
+            "recvTiny.csv");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    
+    @Test
+    public void fullTiny() throws Exception {
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess(jpf+"server_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread(jpf+"client_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "sendImpl - Called",
+                "sendImpl - Sending",
+                "sendImpl - Sent",
+                "recvResponseFor - Found matching response",
+                "recvResponseFor - Returned succesfully"
+            },
+            "fullTiny.csv");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    private Logger setUpLogger(String[] allowedMessages, String filename) throws IOException {
+        // Filter - Only allow entries with specific messages
+        ExclusiveMessagesFilter emf = new ExclusiveMessagesFilter(allowedMessages);
+        
+        // File handler - Save to time stamps to file
+        FileHandler fh = new FileHandler(filename);
+        fh.setFormatter(new BenchLogFormatter(allowedMessages[allowedMessages.length-1]));
+        fh.setFilter(emf);
+        
+        // Memory buffer - Store in memory during benchmark
+        MemoryHandler mh = new MemoryHandler(fh, 100000, Level.OFF);
+        
+        // Logger - Configure logger with handlers, filter and level
+        Logger logger = Logger.getLogger("jolie.net.dbus");
+        logger.setUseParentHandlers(false);
+        logger.addHandler(mh);
+        logger.setLevel(Level.FINE);
+        
+        return logger;
+    }
     
     // *1   Initialization of CommChannel ("Hello cost")
     // *2   Send request (marshal and send off)
