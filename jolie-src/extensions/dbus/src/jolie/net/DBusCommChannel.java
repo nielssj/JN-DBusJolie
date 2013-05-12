@@ -13,6 +13,7 @@ import java.net.URI;
 import java.text.ParseException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.*;
 
 import jolie.Interpreter;
 import jolie.runtime.FaultException;
@@ -32,6 +33,7 @@ import org.xml.sax.SAXException;
 
 public class DBusCommChannel extends CommChannel {
 
+  private static final Logger log = Logger.getLogger("jolie.net.dbus");
   private static boolean TRACE = false;
   protected final Transport transport;
   private String uniqueName;
@@ -99,6 +101,8 @@ public class DBusCommChannel extends CommChannel {
 
   // Blocking: Listen untill a message is received
   public boolean listen() throws IOException, DBusException {
+    log.fine("listen - Called");
+      
     Message m = transport.min.readMessage();
     
     if (m.getName().equals("Introspect")) {
@@ -117,9 +121,7 @@ public class DBusCommChannel extends CommChannel {
   }
 
   private void respondToIntrospection(Message m) throws IOException, DBusException {
-    if (TRACE) {
-      System.out.println("respondToIntrospection - returning auto-generated introspection string");
-    }
+    log.fine("respondToIntrospection - Returning auto-generated introspection string");
     Message mr = new MethodReturn((MethodCall) m, "s", this.introspectionOutput);
     this.transport.mout.writeMessage(mr);
   }
@@ -146,12 +148,8 @@ public class DBusCommChannel extends CommChannel {
 
   // Send message: Calls and returns (OutputPort/InputPort)
   protected void sendImpl(CommMessage message) throws IOException {
-    if (TRACE) {
-      System.out.println("sendimpl - Called");
-    }
-    if (TRACE) {
-      System.out.printf("sendimpl - Operationname: %s\n", message.operationName());
-    }
+    log.info("sendImpl - Called");
+    log.fine(String.format("sendImpl - Operation name: %s", message.operationName()));
 
     long id = message.id();
     StringBuilder builder = new StringBuilder();
@@ -199,48 +197,40 @@ public class DBusCommChannel extends CommChannel {
         sentMessages.put(message.id(), m);
       }
     } catch (DBusException e) {
-      if (TRACE) {
-        System.out.println("DBus Exception in sendimpl");
-      }
-      if (TRACE) {
-        System.out.println(e);
-      }
+      log.log(Level.SEVERE, "sendimpl - Exception from dbus-java binding", e);
       throw new IOException(e);
     }
-
+    
+    log.fine("sendImpl - Sending");
     this.transport.mout.writeMessage(m);
+    log.fine("sendImpl - Sent");
+    
+    log.info("sendImpl - Returned succesfully");
   }
 
   // Receive message: Incomming calls (InputPort)
   protected CommMessage recvImpl() throws IOException {
-    if (TRACE) {
-      System.out.println("recvimpl - Called");
-    }
+    log.info("recvImpl - Called");
 
     try {
       if (!inputQueue.isEmpty()) {
+        // Pulling a D-Bus message from queue
         Message msg = this.messages.get(this.inputQueue.poll());
-        if (TRACE) {
-          System.out.printf("recvimpl - Pulled D-Bus message from queue: %s\n", msg);
-        }
 
         if (msg instanceof MethodCall) {
-          if (TRACE) {
-            System.out.printf("recvimpl - is MethodCall, marshalling to Jolie CommMessage: %s\n", msg);
-          }
-
+          // Method call found, marshalling to Jolie CommMessage
           Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspector.requestArgs.get(msg.getName()));
           CommMessage cmsg = new CommMessage(msg.getSerial(), msg.getName(), "/", val, null);
-
-          if (TRACE) {
-            System.out.printf("recvimpl - Marshalled returning CommMessage to CommCore: %s\n", cmsg);
-          }
+          
+          log.info("recvImpl - Returned succesfully");
           return cmsg;
         } else {
-          throw new RuntimeException("recvimpl - Unsupported message type");
+          log.severe("recvImpl - Unsupported message type");
+          throw new RuntimeException("recvImpl - Unsupported message type");
         }
       } else {
-        throw new RuntimeException("recvimpl - Input message queue was empty"); // This should only happen if we have a bug
+        log.severe("recvImpl - Input message queue was empty");
+        throw new RuntimeException("recvImpl - Input message queue was empty"); // This should only happen if we have a bug
       }
     } catch (DBusException ex) {
       throw new IOException(ex);
@@ -250,49 +240,38 @@ public class DBusCommChannel extends CommChannel {
   // Receive message: Incomming responses (OutputPort)
   @Override
   public CommMessage recvResponseFor(CommMessage request) throws IOException {
-    if (TRACE) {
-      System.out.println("recvResponsefor - Called");
-    }
-    if (TRACE) {
-      System.out.printf("recvResponsefor - OperationName: %s \n", request.operationName());
-    }
+    log.info("recvResponseFor - Called");
+    log.fine(String.format("recvResponseFor - Operation name: %s", request.operationName()));
 
+    // Fetch matching call to get D-Bus serial
     MethodCall call = (MethodCall) sentMessages.remove(request.id());
     try {
-      if (TRACE) {
-        System.out.println("recvResponsefor - Looking for response in input transport");
-      }
+      // Looking for response in input transport
       Message msg = listenSpecific(call.getSerial());
-
-      if (TRACE) {
-        System.out.println("recvResponsefor - Input found, checking type..");
-      }
+      log.info("recvResponseFor - Found matching response");
+      
       if (msg instanceof MethodReturn) {
-        if (TRACE) {
-          System.out.printf("recvResponsefor - Response appears to be successful, marshalling to Jolie CommMessage: %s\n", msg);
-        }
+        // Success response found, marshalling to Jolie Reqsponses
         Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspector.responseArgs.get(request.operationName()));
+        
+        log.info("recvResponseFor - Returned succesfully");
         return CommMessage.createResponse(request, val);
       } else if (msg instanceof Error) {
-        if (TRACE) {
-          System.out.printf("recvResponsefor - Response appears to be an error, marshalling to Jolie CommMessage: %s\n", msg);
-        }
+        // Error response found, marshalling to Jolie FaultResponse
         Object[] parameters = msg.getParameters();
+        
+        log.info("recvResponseFor - Returned fault response");
         return CommMessage.createFaultResponse(request,
                 new FaultException(msg.getName(), (parameters != null && parameters.length > 0) ? (String) parameters[0] : ""));
       }
 
-      if (TRACE) {
-        System.out.println("recvResponsefor - Not a supported response type, continuing to look in input transport!");
-      }
+      log.warning(String.format("recvResponseFor - Not a supported response type, continuing to look in input transport: %s", msg));
+      return null;
+      
     } catch (DBusException e) {
-      if (TRACE) {
-        System.out.printf("recvResponsefor - DBusException while reading input transport: %s\n", e);
-      }
+      log.log(Level.SEVERE, "recvResponseFor - DBusException while reading input transport", e);
       throw new IOException(e);
     }
-
-    return null;
   }
 
   protected void closeImpl() throws IOException {
