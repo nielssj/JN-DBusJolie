@@ -91,10 +91,10 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	protected CommMessage recvImpl()
 		throws IOException
 	{
-                log.info("recvImpl - Called");
+                log.info(String.format("recvImpl - Called:%s", System.nanoTime()));
 		try {
                         CommMessage resp = protocol().recv( istream, ostream );
-			log.info("recvImpl - Returned succesfully");
+			log.info(String.format("recvImpl - Returned succesfully:%s", System.nanoTime()));
                         return resp;
 		} catch( IllegalBlockingModeException e ) {
 			throw new IOException( e );
@@ -110,12 +110,11 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	protected void sendImpl( CommMessage message )
 		throws IOException
 	{
-                log.info("sendImpl - Called");
+                log.info(String.format("sendImpl - Called:%s", System.nanoTime()));
 		try {
 			protocol().send( ostream, message, istream );
-                        log.info("sendImpl - Sending");
 			ostream.flush();
-                        log.info("sendImpl - Sent");
+                        log.fine(String.format("sendImpl - Sent:%s", System.nanoTime()));
 		} catch( IllegalBlockingModeException e ) {
 			throw new IOException( e );
 		}

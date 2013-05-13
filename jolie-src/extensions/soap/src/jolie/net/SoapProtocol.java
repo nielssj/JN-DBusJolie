@@ -83,6 +83,7 @@ import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Logger;
 import javax.wsdl.BindingOperation;
 import javax.wsdl.BindingOutput;
 import javax.wsdl.Definition;
@@ -135,6 +136,8 @@ import org.xml.sax.InputSource;
  */
 public class SoapProtocol extends SequentialCommProtocol
 {
+        private static final Logger log = Logger.getLogger("jolie.net.socket");
+        
 	private String inputId = null;
 	private final Interpreter interpreter;
 	private final MessageFactory messageFactory;
@@ -855,6 +858,7 @@ public class SoapProtocol extends SequentialCommProtocol
 
 			inputId = message.operationName();
 
+                        log.fine(String.format("sendImpl - Sending:%s", System.nanoTime()));
 			Writer writer = new OutputStreamWriter( ostream );
 			writer.write( messageString );
 			writer.flush();
