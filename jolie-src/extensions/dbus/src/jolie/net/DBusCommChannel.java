@@ -148,7 +148,7 @@ public class DBusCommChannel extends CommChannel {
 
   // Send message: Calls and returns (OutputPort/InputPort)
   protected void sendImpl(CommMessage message) throws IOException {
-    log.info("sendImpl - Called");
+    log.info(String.format("sendImpl - Called:%s", System.nanoTime()));
     log.fine(String.format("sendImpl - Operation name: %s", message.operationName()));
 
     long id = message.id();
@@ -201,9 +201,9 @@ public class DBusCommChannel extends CommChannel {
       throw new IOException(e);
     }
     
-    log.fine("sendImpl - Sending");
+    log.fine(String.format("sendImpl - Sending:%s", System.nanoTime()));
     this.transport.mout.writeMessage(m);
-    log.fine("sendImpl - Sent");
+    log.fine(String.format("sendImpl - Sent:%s", System.nanoTime()));
     
     log.info("sendImpl - Returned succesfully");
   }
@@ -240,7 +240,7 @@ public class DBusCommChannel extends CommChannel {
   // Receive message: Incomming responses (OutputPort)
   @Override
   public CommMessage recvResponseFor(CommMessage request) throws IOException {
-    log.info("recvResponseFor - Called");
+    log.info(String.format("recvResponseFor - Called:%s", System.nanoTime()));
     log.fine(String.format("recvResponseFor - Operation name: %s", request.operationName()));
 
     // Fetch matching call to get D-Bus serial
@@ -248,13 +248,13 @@ public class DBusCommChannel extends CommChannel {
     try {
       // Looking for response in input transport
       Message msg = listenSpecific(call.getSerial());
-      log.info("recvResponseFor - Found matching response");
+      log.info(String.format("recvResponseFor - Found matching response:%s", System.nanoTime()));
       
       if (msg instanceof MethodReturn) {
         // Success response found, marshalling to Jolie Reqsponses
         Value val = DBusMarshalling.ToJolieValue(msg.getParameters(), msg.getSig(), this.introspector.responseArgs.get(request.operationName()));
         
-        log.info("recvResponseFor - Returned succesfully");
+        log.info(String.format("recvResponseFor - Returned succesfully:%s", System.nanoTime()));
         return CommMessage.createResponse(request, val);
       } else if (msg instanceof Error) {
         // Error response found, marshalling to Jolie FaultResponse

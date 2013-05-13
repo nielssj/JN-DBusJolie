@@ -21,10 +21,13 @@ public class BenchLogFormatter extends Formatter {
     
     @Override
     public String format(LogRecord lr) {
-        if(lr.getMessage().equals(lastMessage)) {
-            return System.nanoTime() + "\n";
+        String[] parts = lr.getMessage().split(":");
+        String msg = parts[0];
+        String time = parts[1];
+        if(lastMessage.equals(msg)) {
+            return time + "\n";
         } else {
-            return System.nanoTime() + ", ";
+            return time + ", ";
         }
     }
 }

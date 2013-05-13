@@ -16,6 +16,6 @@ public class ExclusiveMessagesFilter implements Filter {
     
     @Override
     public boolean isLoggable(LogRecord lr) {
-        return allowedMessages.contains(lr.getMessage());
+        return allowedMessages.contains(lr.getMessage().split(":")[0]);
     } 
 }
