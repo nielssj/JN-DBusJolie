@@ -47,8 +47,11 @@ public class BenchmarkingTests {
             "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar",
             "-l", "../../jolie-src/lib/xsom/dist",
             "-l", "../../jolie-src/lib/jolie-xml/dist", 
-            "-l", "../../jolie-src/extensions/sodep/dist/*", 
+            "-l", "../../jolie-src/extensions/soap/dist/*",
+            "-l", "../../jolie-src/extensions/http/dist/*",
             "-l", "../../jolie-src/extensions/dbus/dist/*",
+            "-l", "../../jolie-src/lib/relaxngDatatype",
+            "-l", "../../jolie-src/lib/wsdl4j",
             "-l", "../../jolie-src/lib/libmatthew",
             "-l", "../../jolie-src/lib/dbus-java" 
         };
@@ -76,7 +79,7 @@ public class BenchmarkingTests {
                 "sendImpl - Called", 
                 "sendImpl - Returned succesfully"
             }, 
-            "sendTiny.csv");
+            "sendTiny.csv", "jolie.net.dbus");
         
         // Execute
         server.start();
@@ -102,7 +105,7 @@ public class BenchmarkingTests {
                 "recvResponseFor - Found matching response", 
                 "recvResponseFor - Returned succesfully"
             }, 
-            "recvTiny.csv");
+            "recvTiny.csv", "jolie.net.dbus");
         
         // Execute
         server.start();
@@ -132,7 +135,7 @@ public class BenchmarkingTests {
                 "recvResponseFor - Found matching response",
                 "recvResponseFor - Returned succesfully"
             },
-            "fullTiny.csv");
+            "fullTiny.csv", "jolie.net.dbus");
         
         // Execute
         server.start();
@@ -146,7 +149,65 @@ public class BenchmarkingTests {
         mh.push();
     }
     
-    private Logger setUpLogger(String[] allowedMessages, String filename) throws IOException {
+    @Test
+    public void fullTinySOAPSocket() throws Exception {
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess("jolie-programs/benchmark/server_soap_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread("jolie-programs/benchmark/client_soap_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "sendImpl - Called",
+                "sendImpl - Sending",
+                "sendImpl - Sent",
+                "recvImpl - Called",
+                "recvImpl - Returned succesfully"
+            },
+            "fullTinySOAP.csv", "jolie.net.socket");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    @Test
+    public void fullLargeSOAPSocket() throws Exception {
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess("jolie-programs/benchmark/server_soap2_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread("jolie-programs/benchmark/large_soap_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "sendImpl - Called",
+                "sendImpl - Sending",
+                "sendImpl - Sent",
+                "recvImpl - Called",
+                "recvImpl - Returned succesfully"
+            },
+            "fullLargeSOAP.csv", "jolie.net.socket");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    private Logger setUpLogger(String[] allowedMessages, String filename, String logDomain) throws IOException {
         // Filter - Only allow entries with specific messages
         ExclusiveMessagesFilter emf = new ExclusiveMessagesFilter(allowedMessages);
         
@@ -159,7 +220,7 @@ public class BenchmarkingTests {
         MemoryHandler mh = new MemoryHandler(fh, 100000, Level.OFF);
         
         // Logger - Configure logger with handlers, filter and level
-        Logger logger = Logger.getLogger("jolie.net.dbus");
+        Logger logger = Logger.getLogger(logDomain);
         logger.setUseParentHandlers(false);
         logger.addHandler(mh);
         logger.setLevel(Level.FINE);
