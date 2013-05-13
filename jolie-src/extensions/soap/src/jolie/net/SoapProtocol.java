@@ -35,6 +35,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import java.util.logging.*;
+
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 import javax.xml.soap.Detail;
@@ -135,6 +137,7 @@ import org.xml.sax.InputSource;
  */
 public class SoapProtocol extends SequentialCommProtocol
 {
+  private static final Logger log = Logger.getLogger("jolie.net.soap");
 	private String inputId = null;
 	private final Interpreter interpreter;
 	private final MessageFactory messageFactory;
@@ -668,6 +671,7 @@ public class SoapProtocol extends SequentialCommProtocol
 	public void send( OutputStream ostream, CommMessage message, InputStream istream )
 		throws IOException
 	{
+    log.info("send - start");
 		try {
 			inputId = message.operationName();
 			String messageNamespace = getOutputMessageNamespace( message.operationName() );
@@ -854,10 +858,11 @@ public class SoapProtocol extends SequentialCommProtocol
 			}
 
 			inputId = message.operationName();
-
+      log.info("send - before write");
 			Writer writer = new OutputStreamWriter( ostream );
 			writer.write( messageString );
 			writer.flush();
+      log.info("send - after write");
 		} catch( SOAPException se ) {
 			throw new IOException( se );
 		} catch( SAXException saxe ) {
@@ -935,10 +940,11 @@ public class SoapProtocol extends SequentialCommProtocol
 	public CommMessage recv( InputStream istream, OutputStream ostream )
 		throws IOException
 	{
+    log.info("recv - before parse");
 		HttpParser parser = new HttpParser( istream );
 		HttpMessage message = parser.parse();
 		HttpUtils.recv_checkForChannelClosing( message, channel() );
-
+    log.info("recv - after parse");
 		CommMessage retVal = null;
 		String messageId = message.getPropertyOrEmptyString( "soapaction" );
 		FaultException fault = null;
@@ -1065,7 +1071,7 @@ public class SoapProtocol extends SequentialCommProtocol
 				// TODO: do something here?
 			}
 		}
-
+    log.info("recv - before return");
 		return retVal;
 	}
 

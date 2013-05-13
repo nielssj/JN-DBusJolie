@@ -3,15 +3,12 @@
  * and open the template in the editor.
  */
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
+import java.io.IOException;
 import org.junit.*;
 import static org.junit.Assert.*;
 import java.io.PrintWriter;
@@ -19,6 +16,10 @@ import java.lang.reflect.Array;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.MemoryHandler;
 import jolie.lang.NativeType;
 import jolie.net.CommChannel;
 import jolie.net.CommMessage;
@@ -48,19 +49,294 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
  */
 public class BenchmarkingTests {
 
+  private static String[] defaultArgs;
+  private static String jpf;
+
   @BeforeClass
   public static void setUpClass() {
-    // ???
+    jpf = "jolie-programs/concurrency/";
+    defaultArgs = new String[]{
+      "-i", "../../jolie-src/include",
+      "-l", "../../jolie-src/javaServices/coreJavaServices/dist/coreJavaServices.jar",
+      "-l", "../../jolie-src/javaServices/minitorJavaServices/dist/monitorJavaServices.jar",
+      "-l", "../../jolie-src/lib/xsom/dist",
+      "-l", "../../jolie-src/lib/jolie-xml/dist",
+      "-l", "../../jolie-src/extensions/soap/dist/*",
+      "-l", "../../jolie-src/extensions/http/dist/*",
+      "-l", "../../jolie-src/extensions/dbus/dist/*",
+      "-l", "../../jolie-src/lib/relaxngDatatype",
+      "-l", "../../jolie-src/lib/wsdl4j",
+      "-l", "../../jolie-src/lib/libmatthew",
+      "-l", "../../jolie-src/lib/dbus-java"
+    };
   }
 
   @Before
   public void setUp() {
-    // ???
+    System.setSecurityManager(new NoExitSecurityManager());
   }
 
   @After
   public void tearDown() {
-    // ???
+    System.setSecurityManager(null);
+  }
+
+  @Test
+  public void sendTiny() throws Exception {
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess(jpf + "server_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread(jpf + "client_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "sendImpl - Called",
+      "sendImpl - Returned succesfully"
+    },
+            "sendTiny.csv", "jolie.net.dbus");
+
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  @Test
+  public void recvTiny() throws Exception {
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess(jpf + "server_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread(jpf + "client_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "recvResponseFor - Found matching response",
+      "recvResponseFor - Returned succesfully"
+    },
+            "recvTiny.csv", "jolie.net.dbus");
+
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  @Test
+  public void fullTiny() throws Exception {
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess(jpf + "server_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread(jpf + "client_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "sendImpl - Called",
+      "sendImpl - Sending",
+      "sendImpl - Sent",
+      "recvResponseFor - Found matching response",
+      "recvResponseFor - Returned succesfully"
+    },
+            "fullTiny.csv", "jolie.net.dbus");
+
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  @Test
+  public void fullTinySOAPSocket() throws Exception {
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess("jolie-programs/benchmark/server_soap_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread("jolie-programs/benchmark/client_soap_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "sendImpl - Called",
+      "sendImpl - Sending",
+      "sendImpl - Sent",
+      "recvImpl - Called",
+      "recvImpl - Returned succesfully"
+    },
+            "fullTinySOAP.csv", "jolie.net.socket");
+
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  @Test
+  public void fullLargeSOAPSocket() throws Exception {
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess("jolie-programs/benchmark/server_soap2_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread("jolie-programs/benchmark/large_soap_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "sendImpl - Called",
+      "sendImpl - Sending",
+      "sendImpl - Sent",
+      "recvImpl - Called",
+      "recvImpl - Returned succesfully"
+    },
+            "fullLargeSOAP.csv", "jolie.net.socket");
+
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  private Logger setUpLogger(String[] allowedMessages, String filename, String logDomain) throws IOException {
+    // Filter - Only allow entries with specific messages
+    ExclusiveMessagesFilter emf = new ExclusiveMessagesFilter(allowedMessages);
+
+    // File handler - Save to time stamps to file
+    FileHandler fh = new FileHandler(filename);
+    fh.setFormatter(new BenchLogFormatter(allowedMessages[allowedMessages.length - 1]));
+    fh.setFilter(emf);
+
+    // Memory buffer - Store in memory during benchmark
+    MemoryHandler mh = new MemoryHandler(fh, 100000, Level.OFF);
+
+    // Logger - Configure logger with handlers, filter and level
+    Logger logger = Logger.getLogger(logDomain);
+    logger.setUseParentHandlers(false);
+    logger.addHandler(mh);
+    logger.setLevel(Level.FINE);
+
+    return logger;
+  }
+
+  @Test
+  public void soapSend() throws Exception {
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "send - start",
+      "send - before write",
+      "send - after write",
+      "recv - before parse",
+      "recv - after parse",
+      "recv - before return"
+    }, "soapsend.csv", "jolie.net.soap");
+
+    int size = 200;
+
+    Value root = Value.create();
+    Map<String, ValueVector> children = root.children();
+    int argNo = 0;
+    int currentArgNo;
+
+    currentArgNo = argNo;
+    for (; argNo < currentArgNo + size; argNo++) {
+      ValueVector _int = ValueVector.create();
+      _int.add(Value.create(42));
+      children.put("arg" + argNo, _int);
+    }
+
+    CommMessage m = CommMessage.createRequest("operation", null, root);
+
+    Pair<Expression, Expression>[] exprs = (Pair<Expression, Expression>[]) Array.newInstance(Pair.class, 1);
+    exprs[0] = new Pair<Expression, Expression>(new Expression() {
+      @Override
+      public Value evaluate() {
+        return Value.UNDEFINED_VALUE;
+      }
+
+      @Override
+      public Expression cloneExpression(TransformationReason tr) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+      }
+    }, null);
+
+    VariablePath vp = new VariablePath(exprs) {
+      @Override
+      public Value getRootValue() {
+        return Value.UNDEFINED_VALUE;
+      }
+    };
+
+    CommProtocol soap = new SoapProtocol(vp, new URI("www.test.com"), null);
+
+    ByteArrayOutputStream temp = new ByteArrayOutputStream(100000);
+    OutputStream out;
+    InputStream in;
+
+    soap.send(temp, m, null);
+    temp.flush();
+    temp.close();
+
+    String XMLstring = new String(temp.toByteArray());
+
+    int wc = 100;
+    int bc = 1000;
+
+    // Warm up
+    System.out.println("Starting warm up..");
+    for (int i = 0; i < wc; i++) {
+      out = new FileOutputStream("/dev/null");
+      in = new ByteArrayInputStream(XMLstring.getBytes());
+
+      soap.send(out, m, in);
+      out.flush();
+      out.close();
+
+      soap.recv(in, out);
+      in.close();
+    }
+
+    // Benchmark
+    System.out.println("Starting benchmark..");
+
+    for (int i = 0; i < bc; i++) {
+      out = new FileOutputStream("/dev/null");
+      in = new ByteArrayInputStream(XMLstring.getBytes());
+
+      soap.send(out, m, null);
+      out.flush();
+      out.close();
+
+      soap.recv(in, out);
+      in.close();
+    }
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
   }
 
   // *1   Initialization of CommChannel ("Hello cost")
@@ -162,6 +438,7 @@ public class BenchmarkingTests {
     writeToCSV(sends, trips, recvs);
 
     assertTrue(true);
+
   }
 
   @Test
@@ -384,7 +661,7 @@ public class BenchmarkingTests {
 
   @Test
   public void test3() throws Exception {
-    int size = 200;
+    int size = 10;
 
     Value root = Value.create();
     Map<String, ValueVector> children = root.children();
@@ -431,10 +708,10 @@ public class BenchmarkingTests {
     temp.close();
 
     String XMLstring = new String(temp.toByteArray());
-    
+
     int wc = 10000;
     int bc = 100000;
-    
+
     // Warm up
     System.out.println("Starting warm up..");
     for (int i = 0; i < wc; i++) {
@@ -444,7 +721,7 @@ public class BenchmarkingTests {
       soap.send(out, m, in);
       out.flush();
       out.close();
-      
+
       soap.recv(in, out);
       in.close();
     }
@@ -458,7 +735,7 @@ public class BenchmarkingTests {
     for (int i = 0; i < bc; i++) {
       out = new FileOutputStream("/dev/null");
       in = new ByteArrayInputStream(XMLstring.getBytes());
-      
+
       startSend = System.nanoTime();
       soap.send(out, m, null);
       endSend = System.nanoTime();
@@ -496,6 +773,6 @@ public class BenchmarkingTests {
 
     pw.flush();
     pw.close();
-   
+
   }
 }

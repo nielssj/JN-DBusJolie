@@ -34,6 +34,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import jolie.Interpreter;
 import jolie.net.protocols.CommProtocol;
+import java.util.logging.*;
 
 
 /**
@@ -42,6 +43,8 @@ import jolie.net.protocols.CommProtocol;
  */
 public class SocketCommChannel extends SelectableStreamingCommChannel
 {
+        private static final Logger log = Logger.getLogger("jolie.net.socket");
+    
 	private final SocketChannel socketChannel;
 	private final PreBufferedInputStream istream;
 	private final OutputStream ostream;
@@ -88,8 +91,11 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	protected CommMessage recvImpl()
 		throws IOException
 	{
+                log.info("recvImpl - Called");
 		try {
-			return protocol().recv( istream, ostream );
+                        CommMessage resp = protocol().recv( istream, ostream );
+			log.info("recvImpl - Returned succesfully");
+                        return resp;
 		} catch( IllegalBlockingModeException e ) {
 			throw new IOException( e );
 		}
@@ -104,9 +110,12 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	protected void sendImpl( CommMessage message )
 		throws IOException
 	{
+                log.info("sendImpl - Called");
 		try {
 			protocol().send( ostream, message, istream );
+                        log.info("sendImpl - Sending");
 			ostream.flush();
+                        log.info("sendImpl - Sent");
 		} catch( IllegalBlockingModeException e ) {
 			throw new IOException( e );
 		}

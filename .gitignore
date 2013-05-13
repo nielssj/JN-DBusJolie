@@ -7,3 +7,8 @@ private.xml
 /tests/DBusJolieTests/nbproject/private/
 /jolie-src/libjolie/nbproject/private/
 /jolie-src/extensions/soap/nbproject/private/
+/jolie-src/extensions/http/nbproject/private/
+/jolie-src/lib/xsom/nbproject/private/
+/jolie-src/lib/jolie-xml/nbproject/private/
+/jolie-src/support/jolie-gwt/nbproject/private/
+/jolie-src/extensions/sodep/nbproject/private/
