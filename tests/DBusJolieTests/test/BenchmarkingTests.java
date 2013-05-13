@@ -3,11 +3,20 @@
  * and open the template in the editor.
  */
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import org.junit.*;
 import static org.junit.Assert.*;
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import jolie.lang.NativeType;
@@ -16,14 +25,20 @@ import jolie.net.CommMessage;
 import jolie.net.DBusCommChannel;
 import jolie.net.DBusCommChannelFactory;
 import jolie.net.DBusMarshalling;
+import jolie.net.SoapProtocol;
 import jolie.net.ports.InputPort;
 import jolie.net.ports.Interface;
 import jolie.net.ports.OutputPort;
+import jolie.net.protocols.CommProtocol;
+import jolie.process.TransformationReason;
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
+import jolie.runtime.VariablePath;
+import jolie.runtime.expression.Expression;
 import jolie.runtime.typing.OneWayTypeDescription;
 import jolie.runtime.typing.RequestResponseTypeDescription;
 import jolie.runtime.typing.Type;
+import jolie.util.Pair;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 
@@ -279,13 +294,11 @@ public class BenchmarkingTests {
     double marshalUnknownSD = new StandardDeviation().evaluate(marshalsUnknown);
     double demarshalSD = new StandardDeviation().evaluate(demarshals);
     System.out.printf("sd:\t%fms\t%fms\t\t%fms\n", marshalSD, marshalUnknownSD, demarshalSD);
-
-    assertTrue(true);
   }
 
   @Test
   public void test2() throws Exception {
-    int size = 2000;
+    int size = 1000;
 
     Value root = Value.create();
     Map<String, ValueVector> children = root.children();
@@ -308,7 +321,7 @@ public class BenchmarkingTests {
     signature = sb.toString();
 
     int wc = 10000;
-    int bc = 1000000;
+    int bc = 100000;
 
     // Warm up
     System.out.println("Starting warm up..");
@@ -354,8 +367,8 @@ public class BenchmarkingTests {
     double marshalMean = new Mean().evaluate(marshals);
     double marshalUnknownMean = new Mean().evaluate(marshalsUnknown);
     double demarshalMean = new Mean().evaluate(demarshals);
-    //System.out.println("\tmarshal\t\tunknown marshal\t\tdemarshal");
-    //System.out.printf("mean:\t%fms\t%fms\t\t%fms\n", marshalMean, marshalUnknownMean, demarshalMean);
+    System.out.println("\tmarshal\t\tunknown marshal\t\tdemarshal");
+    System.out.printf("mean:\t%fms\t%fms\t\t%fms\n", marshalMean, marshalUnknownMean, demarshalMean);
 
 
 
@@ -363,25 +376,115 @@ public class BenchmarkingTests {
     double marshalSD = new StandardDeviation().evaluate(marshals);
     double marshalUnknownSD = new StandardDeviation().evaluate(marshalsUnknown);
     double demarshalSD = new StandardDeviation().evaluate(demarshals);
-    //System.out.printf("sd:\t%fms\t%fms\t\t%fms\n", marshalSD, marshalUnknownSD, demarshalSD);
-
-
-    System.out.println("Marshal");
-    System.out.printf("Mean:\t%fms \n", marshalMean);
-    System.out.printf("SD:\t%fms \n", marshalSD);
-
-
-    System.out.println("Unknown Marshal");
-    System.out.printf("Mean:\t%fms \n", marshalUnknownMean);
-    System.out.printf("SD:\t%fms \n", marshalUnknownSD);
-
-
-    System.out.println("Marshal");
-    System.out.printf("Mean:\t%fms \n", demarshalMean);
-    System.out.printf("SD:\t%fms \n", demarshalSD);
+    System.out.printf("sd:\t%fms\t%fms\t\t%fms\n", marshalSD, marshalUnknownSD, demarshalSD);
 
     writeToCSV(marshals, marshalsUnknown, demarshals);
     assertTrue(true);
+  }
+
+  @Test
+  public void test3() throws Exception {
+    int size = 200;
+
+    Value root = Value.create();
+    Map<String, ValueVector> children = root.children();
+    int argNo = 0;
+    int currentArgNo;
+
+    currentArgNo = argNo;
+    for (; argNo < currentArgNo + size; argNo++) {
+      ValueVector _int = ValueVector.create();
+      _int.add(Value.create(42));
+      children.put("arg" + argNo, _int);
+    }
+
+    CommMessage m = CommMessage.createRequest("operation", null, root);
+
+    Pair<Expression, Expression>[] exprs = (Pair<Expression, Expression>[]) Array.newInstance(Pair.class, 1);
+    exprs[0] = new Pair<Expression, Expression>(new Expression() {
+      @Override
+      public Value evaluate() {
+        return Value.UNDEFINED_VALUE;
+      }
+
+      @Override
+      public Expression cloneExpression(TransformationReason tr) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+      }
+    }, null);
+
+    VariablePath vp = new VariablePath(exprs) {
+      @Override
+      public Value getRootValue() {
+        return Value.UNDEFINED_VALUE;
+      }
+    };
+
+    CommProtocol soap = new SoapProtocol(vp, new URI("www.test.com"), null);
+
+    ByteArrayOutputStream temp = new ByteArrayOutputStream(100000);
+    OutputStream out;
+    InputStream in;
+
+    soap.send(temp, m, null);
+    temp.flush();
+    temp.close();
+
+    String XMLstring = new String(temp.toByteArray());
+    
+    int wc = 10000;
+    int bc = 100000;
+    
+    // Warm up
+    System.out.println("Starting warm up..");
+    for (int i = 0; i < wc; i++) {
+      out = new FileOutputStream("/dev/null");
+      in = new ByteArrayInputStream(XMLstring.getBytes());
+
+      soap.send(out, m, in);
+      out.flush();
+      out.close();
+      
+      soap.recv(in, out);
+      in.close();
+    }
+
+    // Benchmark
+    System.out.println("Starting benchmark..");
+    long startSend, endSend, startRecv, endRecv;
+    double[] sends = new double[bc];
+    double[] recvs = new double[bc];
+
+    for (int i = 0; i < bc; i++) {
+      out = new FileOutputStream("/dev/null");
+      in = new ByteArrayInputStream(XMLstring.getBytes());
+      
+      startSend = System.nanoTime();
+      soap.send(out, m, null);
+      endSend = System.nanoTime();
+      out.flush();
+      out.close();
+
+      startRecv = System.nanoTime();
+      soap.recv(in, out);
+      endRecv = System.nanoTime();
+      in.close();
+
+      sends[i] = new Long(endSend - startSend).doubleValue() / (1000000.0);
+      recvs[i] = new Long(endRecv - startRecv).doubleValue() / (1000000.0);
+    }
+
+    // Mean
+    double sendMean = new Mean().evaluate(sends);
+    double recvMean = new Mean().evaluate(sends);
+    System.out.println("send\t\t\trecv");
+    System.out.printf("mean:\t%fms\t%fms\n", sendMean, recvMean);
+
+
+    // Standard Deviation
+    double sendSD = new StandardDeviation().evaluate(sends);
+    double recvSD = new StandardDeviation().evaluate(recvs);
+    System.out.printf("sd:\t%fms\t%fms\n", sendSD, recvSD);
   }
 
   private void writeToCSV(double[] sends, double[] trips, double[] recvs) throws Exception {
@@ -393,5 +496,6 @@ public class BenchmarkingTests {
 
     pw.flush();
     pw.close();
+   
   }
 }
