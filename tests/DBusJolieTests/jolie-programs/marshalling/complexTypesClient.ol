@@ -1,9 +1,9 @@
-include "paramsInterface.iol"
+include "complexTypesInterface.iol"
 include "console.iol"
 
-outputPort ParamsServer {
-	Location: "dbus:/net.jolie.params:/paramsServer"
-	Interfaces: Params
+outputPort ComplexServer {
+	Location: "dbus:/net.jolie.complex:/complexServer"
+	Interfaces: Complex
 }
 
 main 
@@ -19,7 +19,7 @@ main
 	argument.longMapArray[1].long1 = 3L;
 	argument.longMapArray[1].long2 = 4L;
 
-	testParams@ParamsServer( argument )( response );
+	testParams@ComplexServer( argument )( response );
 
 	if (response.intValue == 42) {
 		println@Console( "Passed" )()

@@ -1,12 +1,10 @@
-include "paramsInterface.iol"
+include "complexTypesInterface.iol"
 include "console.iol"
 
-inputPort ParamsServer {
-	Location: "dbus:/net.jolie.params:/paramsServer"
-	Interfaces: Params
+inputPort ComplexServer {
+	Location: "dbus:/net.jolie.complex:/complexServer"
+	Interfaces: Complex
 }
-
-execution { sequential }
 
 main
 {
