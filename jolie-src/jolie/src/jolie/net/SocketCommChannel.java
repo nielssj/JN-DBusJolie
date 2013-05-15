@@ -62,11 +62,16 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 		throws IOException
 	{
 		super( location, protocol );
+                
+                log.info(String.format("SocketCommChannel - Constructing channel:%s", System.nanoTime()));
+                
 		this.socketChannel = socketChannel;
 		socketChannel.socket().setSoLinger( true, SO_LINGER );
 		this.istream = new PreBufferedInputStream( Channels.newInputStream( socketChannel ) );
 		this.ostream = new BufferedOutputStream( Channels.newOutputStream( socketChannel ) );
 		setToBeClosed( false ); // Socket connections are kept open by default
+                
+                log.info(String.format("SocketCommChannel - Channel constructed:%s", System.nanoTime()));
 	}
 	
 	/**
