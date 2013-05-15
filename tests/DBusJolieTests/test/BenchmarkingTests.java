@@ -209,6 +209,100 @@ public class BenchmarkingTests {
         mh.push();
     }
     
+    @Test
+    public void initDBus() throws Exception {
+        // NOTICE: For this test to be useful channel persistance 
+        // has to be disabled in the DBusCommChannel constructor 
+        // (Otherwise only a single measurement can be made per run).
+        
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess(jpf+"server_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread(jpf+"client_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "createChannel - Creating channel for OutputPort",
+                "DBusCommChannel - Retreiving introspection data",
+                "DBusCommChannel - Channel constructed"
+            },
+            "initDBus.csv", "jolie.net.dbus");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    @Test
+    public void initDBusInput() throws Exception {
+        // NOTICE: For this test to be useful channel persistance 
+        // has to be disabled in the DBusCommChannel constructor 
+        // (Otherwise only a single measurement can be made per run).
+        
+        // Configure client and server
+        JolieThread server = new JolieThread(jpf+"server_concurrent.ol", defaultArgs);
+        JolieSubProcess client = new JolieSubProcess(jpf+"client_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "createChannel - Creating channel for InputPort",
+                "DBusCommChannel - Retreiving introspection data",
+                "DBusCommChannel - Channel constructed"
+            },
+            "initDBusInput.csv", "jolie.net.dbus");
+        
+        // Execute
+        server.start();
+        Thread.sleep(250); // Wait for server to start
+        client.start();
+        client.join();
+        server.interrupt();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
+    
+    @Test
+    public void initSocket() throws Exception {
+        // NOTICE: For this test to be useful channel persistance 
+        // has to be disabled in the SocketCommChannel constructor 
+        // (Otherwise only a single measurement can be made per run).
+        
+        // Configure client and server
+        JolieSubProcess server = new JolieSubProcess("jolie-programs/benchmark/server_soap_concurrent.ol", defaultArgs);
+        JolieThread client = new JolieThread("jolie-programs/benchmark/client_soap_benchmark.ol", defaultArgs);
+        
+        // Set up benchmark logging
+        Logger logger = setUpLogger(
+            new String[] {
+                "createChannel - Creating channel for OutputPort",
+                "SocketCommChannel - Constructing channel",
+                "SocketCommChannel - Channel constructed"
+            },
+            "initSocket.csv", "jolie.net.socket");
+        
+        // Execute
+        server.start();
+        String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+        client.start();
+        client.join();
+        server.stop();
+        
+        // Push memory log to file
+        MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+        mh.push();
+    }
+    
     private Logger setUpLogger(String[] allowedMessages, String filename, String logDomain) throws IOException {
         // Filter - Only allow entries with specific messages
         ExclusiveMessagesFilter emf = new ExclusiveMessagesFilter(allowedMessages);
