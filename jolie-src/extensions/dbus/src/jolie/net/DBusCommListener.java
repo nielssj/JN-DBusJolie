@@ -18,7 +18,9 @@ public class DBusCommListener extends CommListener implements Runnable {
   @Override
   public void shutdown() {
     try {
-      channel.disconnect();
+      if(channel != null) {
+        channel.disconnect();
+      }
     } catch (IOException ex) {
       throw new RuntimeException("Failed to close D-Bus comm channel", ex);
     }

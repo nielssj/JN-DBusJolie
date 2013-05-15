@@ -334,7 +334,6 @@ public class BenchmarkingTests {
       soap.recv(in, out);
       in.close();
     }
-
     // Push memory log to file
     MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
     mh.push();
@@ -421,25 +420,117 @@ public class BenchmarkingTests {
       sends[i] = new Long(end - start).doubleValue() / (1000000.0);
       trips[i] = new Long(recvd - end).doubleValue() / (1000000.0);
       recvs[i] = new Long(marshld - recvd).doubleValue() / (1000000.0);
+
+      // Mean
+      double sendMean = new Mean().evaluate(sends);
+      double tripMean = new Mean().evaluate(trips);
+      double recvMean = new Mean().evaluate(recvs);
+      System.out.println("\tsend\t\ttrip\t\trecv");
+      System.out.printf("mean:\t%fms\t%fms\t%fms\n", sendMean, tripMean, recvMean);
+
+      // Standard Deviation
+      double sendSD = new StandardDeviation().evaluate(sends);
+      double tripSD = new StandardDeviation().evaluate(trips);
+      double recvSD = new StandardDeviation().evaluate(recvs);
+      System.out.printf("sd:\t%fms\t%fms\t%fms\n", sendSD, tripSD, recvSD);
+
+      writeToCSV(sends, trips, recvs);
+
+      assertTrue(true);
     }
+  }
 
-    // Mean
-    double sendMean = new Mean().evaluate(sends);
-    double tripMean = new Mean().evaluate(trips);
-    double recvMean = new Mean().evaluate(recvs);
-    System.out.println("\tsend\t\ttrip\t\trecv");
-    System.out.printf("mean:\t%fms\t%fms\t%fms\n", sendMean, tripMean, recvMean);
+  @Test
+  public void initDBus() throws Exception {
+    // NOTICE: For this test to be useful channel persistance 
+    // has to be disabled in the DBusCommChannel constructor 
+    // (Otherwise only a single measurement can be made per run).
 
-    // Standard Deviation
-    double sendSD = new StandardDeviation().evaluate(sends);
-    double tripSD = new StandardDeviation().evaluate(trips);
-    double recvSD = new StandardDeviation().evaluate(recvs);
-    System.out.printf("sd:\t%fms\t%fms\t%fms\n", sendSD, tripSD, recvSD);
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess(jpf + "server_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread(jpf + "client_benchmark.ol", defaultArgs);
 
-    writeToCSV(sends, trips, recvs);
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "createChannel - Creating channel for OutputPort",
+      "DBusCommChannel - Retreiving introspection data",
+      "DBusCommChannel - Channel constructed"
+    },
+            "initDBus.csv", "jolie.net.dbus");
 
-    assertTrue(true);
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
 
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  @Test
+  public void initDBusInput() throws Exception {
+    // NOTICE: For this test to be useful channel persistance 
+    // has to be disabled in the DBusCommChannel constructor 
+    // (Otherwise only a single measurement can be made per run).
+
+    // Configure client and server
+    JolieThread server = new JolieThread(jpf + "server_concurrent.ol", defaultArgs);
+    JolieSubProcess client = new JolieSubProcess(jpf + "client_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "createChannel - Creating channel for InputPort",
+      "DBusCommChannel - Retreiving introspection data",
+      "DBusCommChannel - Channel constructed"
+    },
+            "initDBusInput.csv", "jolie.net.dbus");
+
+    // Execute
+    server.start();
+    Thread.sleep(250); // Wait for server to start
+    client.start();
+    client.join();
+    server.interrupt();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
+  }
+
+  @Test
+  public void initSocket() throws Exception {
+    // NOTICE: For this test to be useful channel persistance 
+    // has to be disabled in the SocketCommChannel constructor 
+    // (Otherwise only a single measurement can be made per run).
+
+    // Configure client and server
+    JolieSubProcess server = new JolieSubProcess("jolie-programs/benchmark/server_soap_concurrent.ol", defaultArgs);
+    JolieThread client = new JolieThread("jolie-programs/benchmark/client_soap_benchmark.ol", defaultArgs);
+
+    // Set up benchmark logging
+    Logger logger = setUpLogger(
+            new String[]{
+      "createChannel - Creating channel for OutputPort",
+      "SocketCommChannel - Constructing channel",
+      "SocketCommChannel - Channel constructed"
+    },
+            "initSocket.csv", "jolie.net.socket");
+
+    // Execute
+    server.start();
+    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    client.start();
+    client.join();
+    server.stop();
+
+    // Push memory log to file
+    MemoryHandler mh = (MemoryHandler) logger.getHandlers()[0];
+    mh.push();
   }
 
   @Test

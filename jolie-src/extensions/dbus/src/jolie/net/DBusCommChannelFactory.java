@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.text.ParseException;
+import java.util.logging.Logger;
 import jolie.net.ext.CommChannelFactory;
 import jolie.net.ports.InputPort;
 import jolie.net.ports.Port;
@@ -26,6 +27,8 @@ import org.freedesktop.dbus.exceptions.DBusException;
 @AndJarDeps({"unix.jar", "dbus-2.7.jar", "hexdump-0.2.jar"})
 public class DBusCommChannelFactory extends CommChannelFactory {
 
+  private static final Logger log = Logger.getLogger("jolie.net.dbus");
+  
   public DBusCommChannelFactory(CommCore commCore) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super(commCore);
 
@@ -37,6 +40,8 @@ public class DBusCommChannelFactory extends CommChannelFactory {
   }
 
   public static DBusCommChannel createChannel(URI location, InputPort port) throws DBusException, IOException {
+    log.info(String.format("createChannel - Creating channel for InputPort:%s", System.nanoTime()));
+      
     String[] parts = DBusCommChannelFactory.parseLocation(location.getSchemeSpecificPart());
     String connectionName = parts[0]; 
     String objectPath = parts[1];
@@ -45,14 +50,16 @@ public class DBusCommChannelFactory extends CommChannelFactory {
 
     boolean nameObtained = channel.obtainName(connectionName);
     if (!nameObtained) {
-      throw new RuntimeException(String.format("Could not obtain bus name '%s' because it was already in use or malformed", connectionName));
+      log.severe(String.format("Could not obtain bus name '%s' because it was already in use or malformed", connectionName));
+      throw new IOException(String.format("Could not obtain bus name '%s' because it was already in use or malformed", connectionName));
     }
 
     return channel;
   }
 
-  public CommChannel createChannel(URI location, OutputPort port)
-          throws IOException {
+  public CommChannel createChannel(URI location, OutputPort port) throws IOException {
+    log.info(String.format("createChannel - Creating channel for OutputPort:%s", System.nanoTime()));
+    
     String[] parts = DBusCommChannelFactory.parseLocation(location.getPath());
     String connectionName = parts[0];
     String objectPath = parts[1];
