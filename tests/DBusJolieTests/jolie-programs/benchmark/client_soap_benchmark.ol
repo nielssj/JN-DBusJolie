@@ -10,6 +10,7 @@ outputPort TwiceService {
 main
 {
 	for ( i = 0, i < 1000, i++) {
-		twice@TwiceService( 21 )( response )
+		twice@TwiceService( 21 )( response );
+		println@Console(i)()
 	}
 }

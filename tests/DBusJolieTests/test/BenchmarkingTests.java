@@ -177,11 +177,11 @@ public class BenchmarkingTests {
       "recvImpl - Called",
       "recvImpl - Returned succesfully"
     },
-            "fullTinySOAP.csv", "jolie.net.socket");
+            "fullTinySOAP.csv", "jolie.net.soket");
 
     // Execute
     server.start();
-    String firstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
+    String firlstLine = server.getOutputLine(); // (Blocking) Wait for first output from server
     client.start();
     client.join();
     server.stop();
@@ -230,7 +230,7 @@ public class BenchmarkingTests {
     fh.setFilter(emf);
 
     // Memory buffer - Store in memory during benchmark
-    MemoryHandler mh = new MemoryHandler(fh, 100000, Level.OFF);
+    MemoryHandler mh = new MemoryHandler(fh, 1000000, Level.OFF);
 
     // Logger - Configure logger with handlers, filter and level
     Logger logger = Logger.getLogger(logDomain);
@@ -244,15 +244,16 @@ public class BenchmarkingTests {
   @Test
   public void soapSend() throws Exception {
     // Set up benchmark logging
+
     Logger logger = setUpLogger(
             new String[]{
       "send - start",
-      "send - before write",
-      "send - after write",
+      "sendImpl - Sending",
+      "sendImpl - After send",
       "recv - before parse",
       "recv - after parse",
       "recv - before return"
-    }, "soapsend.csv", "jolie.net.soap");
+    }, "soapsend.csv", "jolie.net.socket");
 
     int size = 200;
 
@@ -302,8 +303,8 @@ public class BenchmarkingTests {
 
     String XMLstring = new String(temp.toByteArray());
 
-    int wc = 100;
-    int bc = 1000;
+    int wc = 10000;
+    int bc = 100000;
 
     // Warm up
     System.out.println("Starting warm up..");
@@ -575,7 +576,7 @@ public class BenchmarkingTests {
 
   @Test
   public void test2() throws Exception {
-    int size = 1000;
+    int size = 2000;
 
     Value root = Value.create();
     Map<String, ValueVector> children = root.children();
@@ -661,7 +662,7 @@ public class BenchmarkingTests {
 
   @Test
   public void test3() throws Exception {
-    int size = 10;
+    int size = 2000;
 
     Value root = Value.create();
     Map<String, ValueVector> children = root.children();
@@ -715,6 +716,9 @@ public class BenchmarkingTests {
     // Warm up
     System.out.println("Starting warm up..");
     for (int i = 0; i < wc; i++) {
+      if (i % 1000 == 0) {
+        System.out.printf("i: %d\n", i);
+      }
       out = new FileOutputStream("/dev/null");
       in = new ByteArrayInputStream(XMLstring.getBytes());
 
@@ -733,6 +737,9 @@ public class BenchmarkingTests {
     double[] recvs = new double[bc];
 
     for (int i = 0; i < bc; i++) {
+      if (i % 10000 == 0) {
+        System.out.printf("i: %d\n", i);
+      }
       out = new FileOutputStream("/dev/null");
       in = new ByteArrayInputStream(XMLstring.getBytes());
 
@@ -762,6 +769,16 @@ public class BenchmarkingTests {
     double sendSD = new StandardDeviation().evaluate(sends);
     double recvSD = new StandardDeviation().evaluate(recvs);
     System.out.printf("sd:\t%fms\t%fms\n", sendSD, recvSD);
+
+
+    PrintWriter pw = new PrintWriter("SOAPprotocolBench.csv", "UTF-8");
+
+    for (int i = 0; i < sends.length; i++) {
+      pw.printf("%f,%f\n", sends[i], recvs[i]);
+    }
+
+    pw.flush();
+    pw.close();
   }
 
   private void writeToCSV(double[] sends, double[] trips, double[] recvs) throws Exception {
