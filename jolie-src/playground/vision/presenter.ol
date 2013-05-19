@@ -47,7 +47,7 @@ define initViewer
 	} else {
 		embedInfo.filepath = "viewers/" + args[0] + ".ol";
 		embedInfo.type = "Jolie";
-		if ( args[0] != "kpdf" && args[0] != "okular" && args[0] != "previewer" ) {
+		if ( args[0] != "kpdf" && args[0] != "okular" && args[0] != "previewer") {
 			throw( CouldNotStartFault, "Unsupported viewer: " + args[0] )
 		};
 

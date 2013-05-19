@@ -32,6 +32,7 @@ public class DBusCommChannelFactory extends CommChannelFactory {
   public DBusCommChannelFactory(CommCore commCore) throws NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super(commCore);
 
+     log.setUseParentHandlers(false);
     System.setProperty("java.library.path", "/usr/local/lib/jni");
 
     Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");

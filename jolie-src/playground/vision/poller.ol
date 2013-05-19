@@ -25,7 +25,7 @@ include "time.iol"
 include "string_utils.iol"
 
 constants {
-	PollingInterval = 500
+	PollingInterval = 100
 }
 
 include "presenter.iol"
