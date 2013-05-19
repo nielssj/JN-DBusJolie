@@ -136,7 +136,7 @@ import org.xml.sax.InputSource;
  */
 public class SoapProtocol extends SequentialCommProtocol
 {
-        private static final Logger log = Logger.getLogger("jolie.net.socket");
+  private static final Logger log = Logger.getLogger("jolie.net.socket");
         
 	private String inputId = null;
 	private final Interpreter interpreter;
@@ -671,6 +671,7 @@ public class SoapProtocol extends SequentialCommProtocol
 	public void send( OutputStream ostream, CommMessage message, InputStream istream )
 		throws IOException
 	{
+   log.info("send - start:"+System.nanoTime());
 		try {
 			inputId = message.operationName();
 			String messageNamespace = getOutputMessageNamespace( message.operationName() );
@@ -857,11 +858,12 @@ public class SoapProtocol extends SequentialCommProtocol
 			}
 
 			inputId = message.operationName();
-
-                        log.fine(String.format("sendImpl - Sending:%s", System.nanoTime()));
+      
+      log.fine(String.format("sendImpl - Sending:%s", System.nanoTime()));
 			Writer writer = new OutputStreamWriter( ostream );
 			writer.write( messageString );
 			writer.flush();
+      log.info("sendImpl - After send:"+System.nanoTime());
 		} catch( SOAPException se ) {
 			throw new IOException( se );
 		} catch( SAXException saxe ) {
@@ -939,10 +941,11 @@ public class SoapProtocol extends SequentialCommProtocol
 	public CommMessage recv( InputStream istream, OutputStream ostream )
 		throws IOException
 	{
+    log.info("recv - before parse:"+System.nanoTime());
 		HttpParser parser = new HttpParser( istream );
 		HttpMessage message = parser.parse();
 		HttpUtils.recv_checkForChannelClosing( message, channel() );
-
+    log.info("recv - after parse:"+System.nanoTime());
 		CommMessage retVal = null;
 		String messageId = message.getPropertyOrEmptyString( "soapaction" );
 		FaultException fault = null;
@@ -1069,7 +1072,7 @@ public class SoapProtocol extends SequentialCommProtocol
 				// TODO: do something here?
 			}
 		}
-
+    log.info("recv - before return:"+System.nanoTime());
 		return retVal;
 	}
 

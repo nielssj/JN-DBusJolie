@@ -34,17 +34,12 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 import jolie.Interpreter;
 import jolie.net.protocols.CommProtocol;
-import java.util.logging.*;
-
 
 /**
  * A CommChannel using a socket to implement communications.
  * @author Fabrizio Montesi
  */
-public class SocketCommChannel extends SelectableStreamingCommChannel
-{
-        private static final Logger log = Logger.getLogger("jolie.net.socket");
-    
+public class SocketCommChannel extends SelectableStreamingCommChannel {
 	private final SocketChannel socketChannel;
 	private final PreBufferedInputStream istream;
 	private final OutputStream ostream;
@@ -63,15 +58,11 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	{
 		super( location, protocol );
                 
-                log.info(String.format("SocketCommChannel - Constructing channel:%s", System.nanoTime()));
-                
 		this.socketChannel = socketChannel;
 		socketChannel.socket().setSoLinger( true, SO_LINGER );
 		this.istream = new PreBufferedInputStream( Channels.newInputStream( socketChannel ) );
 		this.ostream = new BufferedOutputStream( Channels.newOutputStream( socketChannel ) );
 		setToBeClosed( false ); // Socket connections are kept open by default
-                
-                log.info(String.format("SocketCommChannel - Channel constructed:%s", System.nanoTime()));
 	}
 	
 	/**
@@ -96,10 +87,8 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	protected CommMessage recvImpl()
 		throws IOException
 	{
-                log.info(String.format("recvImpl - Called:%s", System.nanoTime()));
 		try {
                         CommMessage resp = protocol().recv( istream, ostream );
-			log.info(String.format("recvImpl - Returned succesfully:%s", System.nanoTime()));
                         return resp;
 		} catch( IllegalBlockingModeException e ) {
 			throw new IOException( e );
@@ -115,11 +104,9 @@ public class SocketCommChannel extends SelectableStreamingCommChannel
 	protected void sendImpl( CommMessage message )
 		throws IOException
 	{
-                log.info(String.format("sendImpl - Called:%s", System.nanoTime()));
 		try {
 			protocol().send( ostream, message, istream );
 			ostream.flush();
-                        log.fine(String.format("sendImpl - Sent:%s", System.nanoTime()));
 		} catch( IllegalBlockingModeException e ) {
 			throw new IOException( e );
 		}

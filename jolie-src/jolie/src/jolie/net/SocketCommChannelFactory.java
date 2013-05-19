@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.SocketChannel;
-import java.util.logging.Logger;
 import jolie.net.ext.CommChannelFactory;
 import jolie.net.ports.OutputPort;
 
@@ -35,9 +34,7 @@ import jolie.net.ports.OutputPort;
  * @author Fabrizio Montesi
  */
 public class SocketCommChannelFactory extends CommChannelFactory
-{
-        private static final Logger log = Logger.getLogger("jolie.net.socket");
-        
+{        
 	public SocketCommChannelFactory( CommCore commCore )
 	{
 		super( commCore );
@@ -45,9 +42,7 @@ public class SocketCommChannelFactory extends CommChannelFactory
 
 	public CommChannel createChannel( URI location, OutputPort port )
 		throws IOException
-	{
-                log.info(String.format("createChannel - Creating channel for OutputPort:%s", System.nanoTime()));
-            
+	{            
 		SocketChannel channel = SocketChannel.open( new InetSocketAddress( location.getHost(), location.getPort() ) );
 		SocketCommChannel ret = null;
 		try {

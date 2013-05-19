@@ -1,5 +1,6 @@
 
 import net.jolie.test.JolieToJava;
+import org.freedesktop.DBus.Introspectable;
 import org.freedesktop.dbus.DBusConnection;
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -48,8 +49,26 @@ public class MarshallingTests {
 
     // Act 
     server.start();
-    Thread.sleep(500);
-    
+    Thread.sleep(1000);
+
+    DBusConnection conn = DBusConnection.getConnection(DBusConnection.SESSION);
+
+    Introspectable intro = conn.getRemoteObject("org.testname", "/object", Introspectable.class);
+    String data = intro.Introspect();
+
+    assertEquals(data, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"
+            + "<node name=\"/object\">"
+            + "<interface name=\"org.testname\">"
+            + "<method name=\"testM\"><arg direction=\"in\" type=\"i\"/><arg direction=\"out\" type=\"i\"/></method>"
+            + "<method name=\"getInt\"><arg direction=\"out\" type=\"i\"/></method>"
+            + "<method name=\"getBool\"><arg direction=\"out\" type=\"b\"/></method>"
+            + "<method name=\"getString\"><arg direction=\"out\" type=\"s\"/></method>"
+            + "</interface>"
+            + "<interface name=\"org.freedesktop.DBus.Introspectable\">"
+            + "<method name=\"Introspect\"><arg direction=\"out\" type=\"s\"/></method>"
+            + "</interface>"
+            + "</node>");
+
     client.start();
     client.join();
 
@@ -70,8 +89,37 @@ public class MarshallingTests {
 
     // Act 
     server.start();
-    Thread.sleep(500);
-    
+    Thread.sleep(1000);
+
+    DBusConnection conn = DBusConnection.getConnection(DBusConnection.SESSION);
+
+    Introspectable intro = conn.getRemoteObject("net.jolie.complex", "/complexServer", Introspectable.class);
+    String data = intro.Introspect();
+
+    assertEquals(data, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"
+            + "<node name=\"/complexServer\">"
+            + "<interface name=\"net.jolie.complex\">"
+            + "<method name=\"testParams\">"
+            + "<arg direction=\"in\" name=\"longMapArray\" type=\"aa{sx}\"/>"
+            + "<arg direction=\"in\" name=\"intArray\" type=\"ai\"/>"
+            + "<arg direction=\"in\" name=\"boolMap\" type=\"a{sb}\"/>"
+            + "<arg direction=\"in\" name=\"stringValue\" type=\"s\"/>"
+            + "<arg direction=\"in\" name=\"intValue\" type=\"i\"/>"
+            + "<arg direction=\"out\" name=\"longMapArray\" type=\"aa{sx}\"/>"
+            + "<arg direction=\"out\" name=\"intArray\" type=\"ai\"/>"
+            + "<arg direction=\"out\" name=\"boolMap\" type=\"a{sb}\"/>"
+            + "<arg direction=\"out\" name=\"stringValue\" type=\"s\"/>"
+            + "<arg direction=\"out\" name=\"intValue\" type=\"i\"/>"
+            + "</method>"
+            + "<method name=\"onewaymethod\">"
+            + "<annotation name=\"org.freedesktop.DBus.Method.NoReply\" value=\"true\"/>"
+            + "<arg direction=\"in\" type=\"i\"/>"
+            + "</method></interface>"
+            + "<interface name=\"org.freedesktop.DBus.Introspectable\">"
+            + "<method name=\"Introspect\"><arg direction=\"out\" type=\"s\"/></method>"
+            + "</interface>"
+            + "</node>");
+
     client.start();
     client.join();
 
@@ -91,8 +139,32 @@ public class MarshallingTests {
 
     // Act 
     server.start();
-    Thread.sleep(500);
-    
+    Thread.sleep(1000);
+
+    DBusConnection conn = DBusConnection.getConnection(DBusConnection.SESSION);
+
+    Introspectable intro = conn.getRemoteObject("net.jolie.variant", "/variantServer", Introspectable.class);
+    String data = intro.Introspect();
+
+    assertEquals(data, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"
+            + "<node name=\"/variantServer\">"
+            + "<interface name=\"net.jolie.variant\">"
+            + "<method name=\"testVariant\">"
+            + "<arg direction=\"in\" name=\"longMapArray\" type=\"aa{sv}\"/>"
+            + "<arg direction=\"in\" name=\"vArray\" type=\"av\"/>"
+            + "<arg direction=\"in\" name=\"intValue\" type=\"v\"/>"
+            + "<arg direction=\"out\" name=\"longMapArray\" type=\"aa{sv}\"/>"
+            + "<arg direction=\"out\" name=\"vArray\" type=\"av\"/>"
+            + "<arg direction=\"out\" name=\"intValue\" type=\"v\"/>"
+            + "</method>"
+            + "</interface>"
+            + "<interface name=\"org.freedesktop.DBus.Introspectable\">"
+            + "<method name=\"Introspect\">"
+            + "<arg direction=\"out\" type=\"s\"/>"
+            + "</method>"
+            + "</interface>"
+            + "</node>");
+
     client.start();
     client.join();
 
