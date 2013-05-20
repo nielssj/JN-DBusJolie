@@ -141,14 +141,21 @@ public class DBusCommChannel extends CommChannel {
     this.transport.mout.writeMessage(mr);
   }
 
-  // Blocking: Listen untill a message with a specific reply serial is received. If the serial was received earlier, return immediately
-  protected Message listenSpecific(Long serial) throws IOException, DBusException {
+  // Blocking: Listen untill a message with a specific reply serial is received.
+  protected Message listenFor(Long serial) throws IOException, DBusException {
     while (true) {
       if (this.inputQueue.remove(serial)) {
         return this.messages.get(serial);
-      } else {
-        Message m = transport.min.readMessage();
-        if (m instanceof MethodReturn || m instanceof Error) {
+      } else { 
+        Message m;
+        synchronized (this.transport.min) {
+            log.info("listenFor - Thread is starting to listen");
+            m = this.transport.min.readMessage();
+        }
+        log.info("listenFor - readMessage terminated");
+        
+        if (m != null && (m instanceof MethodReturn || m instanceof Error)) {
+          log.info("listenFor - A message was found");  
           Long s = m.getReplySerial();
           if (serial.equals(s)) {
             return m;
@@ -161,7 +168,7 @@ public class DBusCommChannel extends CommChannel {
     }
   }
 
-  // Send message: Calls and returns (OutputPort/InputPort)
+  // Send message: Sends message and then returns (OutputPort/InputPort)
   protected void sendImpl(CommMessage message) throws IOException {
     log.info(String.format("sendImpl - Called:%s", System.nanoTime()));
     log.fine(String.format("sendImpl - Operation name: %s", message.operationName()));
@@ -217,7 +224,9 @@ public class DBusCommChannel extends CommChannel {
     }
 
     log.fine(String.format("sendImpl - Sending:%s", System.nanoTime()));
-    this.transport.mout.writeMessage(m);
+    synchronized (this.transport.mout) {
+        this.transport.mout.writeMessage(m);
+    }
     log.fine(String.format("sendImpl - Sent:%s", System.nanoTime()));
 
     log.info("sendImpl - Returned succesfully");
@@ -257,12 +266,12 @@ public class DBusCommChannel extends CommChannel {
   public CommMessage recvResponseFor(CommMessage request) throws IOException {
     log.info(String.format("recvResponseFor - Called:%s", System.nanoTime()));
     log.fine(String.format("recvResponseFor - Operation name: %s", request.operationName()));
-
+    
     // Fetch matching call to get D-Bus serial
     MethodCall call = (MethodCall) sentMessages.remove(request.id());
     try {
       // Looking for response in input transport
-      Message msg = listenSpecific(call.getSerial());
+      Message msg = listenFor(call.getSerial());
       log.info(String.format("recvResponseFor - Found matching response:%s", System.nanoTime()));
 
       if (msg instanceof MethodReturn) {
@@ -300,14 +309,7 @@ public class DBusCommChannel extends CommChannel {
   }
 
   public synchronized boolean isReady() throws IOException {
-    // TODO: Implement?
     return true;
-  }
-
-  @Override
-  public void disposeForInputImpl() throws IOException {
-    // TODO: Implement?
-    Interpreter.getInstance().commCore().registerForPolling(this);
   }
 
   private void _releaseImpl() throws IOException {

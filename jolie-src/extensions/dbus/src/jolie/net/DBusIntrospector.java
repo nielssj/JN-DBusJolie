@@ -205,7 +205,7 @@ public class DBusIntrospector {
             "");
 
     this.channel.transport.mout.writeMessage(m);
-    Message retOrErr = this.channel.listenSpecific(m.getSerial());
+    Message retOrErr = this.channel.listenFor(m.getSerial());
     if (retOrErr instanceof MethodReturn) {
       MethodReturn ret = (MethodReturn) retOrErr;
       String xml = (String) ret.getParameters()[0];

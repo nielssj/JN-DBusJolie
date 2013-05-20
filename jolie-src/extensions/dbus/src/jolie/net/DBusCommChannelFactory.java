@@ -74,7 +74,8 @@ public class DBusCommChannelFactory extends CommChannelFactory {
     Transport transport;
     try {
       BusAddress address = new BusAddress(System.getenv("DBUS_SESSION_BUS_ADDRESS")); // TODO: Move to location (SESSION/SYSTEM)
-      transport = new Transport(address);
+      transport = new Transport();
+      transport.connect(address, 1000);
 
       // Obtain DBus ID
       Message m = new MethodCall("org.freedesktop.DBus", "/",
