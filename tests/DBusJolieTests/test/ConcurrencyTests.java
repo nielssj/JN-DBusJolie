@@ -3,8 +3,28 @@
  * and open the template in the editor.
  */
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import jolie.Jolie;
+import jolie.lang.NativeType;
+import jolie.net.CommChannel;
+import jolie.net.CommMessage;
+import jolie.net.DBusCommChannel;
+import jolie.net.DBusCommChannelFactory;
+import jolie.net.ports.InputPort;
+import jolie.net.ports.Interface;
+import jolie.net.ports.OutputPort;
+import jolie.runtime.Value;
+import jolie.runtime.typing.OneWayTypeDescription;
+import jolie.runtime.typing.RequestResponseTypeDescription;
+import jolie.runtime.typing.Type;
+import org.apache.commons.lang3.ArrayUtils;
+import org.freedesktop.dbus.exceptions.DBusException;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -174,5 +194,212 @@ public class ConcurrencyTests {
         // Assert
         String es = client.getErrorStream();
         assertTrue(es.endsWith("Thrown unhandled fault: org.freedesktop.DBus.Error.ServiceUnknown"));
+    }
+    
+    // 6 - Output port, twice requests with tactical timing of thread sleeps
+    @Test
+    public void test6() throws Exception {
+        // Add console logger
+        Logger logger = Logger.getLogger("jolie.net.dbus");
+        logger.setUseParentHandlers(false);
+        logger.addHandler(new ConsoleHandler());
+        logger.setLevel(Level.FINE);
+        
+        // Arrange
+        DBusCommChannelFactory dcf = new DBusCommChannelFactory(null);
+        URI loc = new URI("dbus:/org.testname:/object");
+        Type t = Type.create(NativeType.INT, null, true, null);
+        RequestResponseTypeDescription rtd = new RequestResponseTypeDescription(t, t, null);
+        Map<String, OneWayTypeDescription> owtds = new HashMap<String, OneWayTypeDescription>();
+        Map<String, RequestResponseTypeDescription> rtds = new HashMap<String, RequestResponseTypeDescription>();
+        rtds.put("Twice", rtd);
+        Interface iface = new Interface(owtds, rtds);
+
+        // Make output channel
+        OutputPort port = new OutputPort(null, "1", null, null, iface, true);
+        CommChannel channel = dcf.createChannel(loc, port);
+
+        int mcount = 2000;
+        CommMessage[] reqs = new CommMessage[mcount];
+        int[] resps = new int[mcount];
+        TwiceOutputThread[] tts = new TwiceOutputThread[mcount];
+        
+        // Make messages
+        for(int i = 0; i < mcount; i++) {
+            reqs[i] = new CommMessage(i, "twice", null, Value.create(i), null);
+        }
+        
+        // Make threads
+        for(int i = 0; i < mcount; i++) {
+            tts[i] = new TwiceOutputThread(reqs[i], channel, 20, 40);
+        }        
+        
+        // Act        
+        for(int i = 0; i < mcount; i++) {
+            tts[i].start();
+        }
+        for(int i = 0; i < mcount; i++) {
+            TwiceOutputThread tt = tts[i];
+            tt.join();
+            resps[i] = tt.getResponse();
+        }
+        
+        // Assert
+        for(int i = 0; i < mcount; i++) {
+            assertTrue(resps[i] == i*2);
+        }
+    }
+    
+    // 7 - Input port, twice responses with tactical timing of thread sleeps
+    @Test
+    public void test7() throws Exception {
+        
+        // Arrange
+        DBusCommChannelFactory dcf = new DBusCommChannelFactory(null);
+        URI loc = new URI("dbus:/org.testname:/object");
+        Type t = Type.create(NativeType.INT, null, true, null);
+        RequestResponseTypeDescription rtd = new RequestResponseTypeDescription(t, t, null);
+        Map<String, OneWayTypeDescription> owtds = new HashMap<String, OneWayTypeDescription>();
+        Map<String, RequestResponseTypeDescription> rtds = new HashMap<String, RequestResponseTypeDescription>();
+        rtds.put("twice", rtd);
+        Interface iface = new Interface(owtds, rtds);
+
+        // Make input channel
+        InputPort iport = new InputPort("john", loc, null, iface, null, null);
+        DBusCommChannel channel = DBusCommChannelFactory.createChannel(loc, iport);
+        
+        int mcount = 2000;
+        CommMessage[] reqs = new CommMessage[mcount];
+        int[] resps = new int[mcount];
+        TwiceInputThread[] tts = new TwiceInputThread[mcount];
+        
+        // Listen loop
+        try {
+            while (true) {
+                if (channel.listen()) {
+                    CommMessage req = channel.recv();
+                    int value = req.value().intValue();
+                    reqs[value] = req;
+                    
+                    TwiceInputThread tt = new TwiceInputThread(req, channel, value, value);
+                    tts[value] = tt;
+                    tt.start();
+                }
+            }
+        } catch (DBusException ex) {
+            // Transport was closed, do nothing
+        } catch (Exception ex) {
+            throw new RuntimeException("Unexpected failure during listening", ex);
+        }
+        
+        for(int i = 0; i < mcount; i++) {
+            TwiceInputThread tt = tts[i];
+            tt.join();
+            resps[i] = tt.getResponse();
+        }
+        
+        // Assert
+        for(int i = 0; i < mcount; i++) {
+            // TODO: Something
+        }
+    }
+    
+    public class TwiceOutputThread extends Thread
+    {
+        private CommMessage req, resp;
+        private CommChannel channel;
+        private int preDelay, postDelay;
+
+        public TwiceOutputThread(CommMessage req, CommChannel channel, int minDelay, int maxDelay)
+        {
+            this.req = req;
+            this.resp = null;
+            this.channel = channel;
+            this.preDelay = minDelay + (int)(Math.random() * ((maxDelay - minDelay) + 1));
+            this.postDelay = minDelay + (int)(Math.random() * ((maxDelay - minDelay) + 1));
+        }
+
+        @Override
+        public void run() {
+            
+            // Take sleep of random length
+            try {
+                Thread.sleep(this.preDelay);
+            } catch (InterruptedException ex) { }
+            
+            // Send request
+            try {
+                this.channel.send(this.req);
+            } catch (IOException ex) { 
+                return; //Failed, test will fail because return value remains null
+            }
+            
+            // Take sleep of random length
+            try {
+                Thread.sleep(this.postDelay);
+            } catch (InterruptedException ex) { }
+            
+            
+            // Receive response
+            try {
+                this.resp = this.channel.recvResponseFor(req);
+            } catch (IOException ex) {
+                //Failed, test will fail because return value remains null
+            }
+        }
+        
+        public int getResponse() {
+            if(resp != null) {
+                return this.resp.value().intValue();
+            }
+            return -1;
+        }
+    }
+    
+    public class TwiceInputThread extends Thread
+    {
+        private CommMessage req, resp;
+        private CommChannel channel;
+        private int preDelay, postDelay;
+
+        public TwiceInputThread(CommMessage req, CommChannel channel, int minDelay, int maxDelay)
+        {
+            this.req = req;
+            this.resp = null;
+            this.channel = channel;
+            this.preDelay = minDelay + (int)(Math.random() * ((maxDelay - minDelay) + 1));
+            this.postDelay = minDelay + (int)(Math.random() * ((maxDelay - minDelay) + 1));
+        }
+
+        @Override
+        public void run() {
+            
+            // Take sleep of random length
+            try {
+                Thread.sleep(this.preDelay);
+            } catch (InterruptedException ex) { }
+            
+            // Send response
+            int value = this.req.value().intValue();
+            this.resp = CommMessage.createResponse(this.req, Value.create(value*2));
+            
+            try {
+                this.channel.send(this.resp);
+            } catch (IOException ex) { 
+                return; //Failed, test will fail because return value remains null
+            }
+            
+            // Take sleep of random length
+            try {
+                Thread.sleep(this.postDelay);
+            } catch (InterruptedException ex) { }
+        }
+        
+        public int getResponse() {
+            if(resp != null) {
+                return this.resp.value().intValue();
+            }
+            return -1;
+        }
     }
 }
