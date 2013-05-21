@@ -55,7 +55,7 @@ public class DBusCommChannel extends CommChannel {
   public DBusCommChannel(Transport transport, String connectionName, String objectPath, URI location, boolean isInputPort, Port port)
           throws IOException, ParseException, DBusException, ParserConfigurationException, SAXException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
     super();
-    
+
     log.info(String.format("DBusCommChannel - Constructing channel:%s", System.nanoTime()));
 
     this.transport = transport;
@@ -146,16 +146,16 @@ public class DBusCommChannel extends CommChannel {
     while (true) {
       if (this.inputQueue.remove(serial)) {
         return this.messages.get(serial);
-      } else { 
+      } else {
         Message m;
         synchronized (this.transport.min) {
-            log.info("listenFor - Thread is starting to listen");
-            m = this.transport.min.readMessage();
+          log.info("listenFor - Thread is starting to listen");
+          m = this.transport.min.readMessage();
         }
         log.info("listenFor - readMessage terminated");
-        
+
         if (m != null && (m instanceof MethodReturn || m instanceof Error)) {
-          log.info("listenFor - A message was found");  
+          log.info("listenFor - A message was found");
           Long s = m.getReplySerial();
           if (serial.equals(s)) {
             return m;
@@ -225,7 +225,7 @@ public class DBusCommChannel extends CommChannel {
 
     log.fine(String.format("sendImpl - Sending:%s", System.nanoTime()));
     synchronized (this.transport.mout) {
-        this.transport.mout.writeMessage(m);
+      this.transport.mout.writeMessage(m);
     }
     log.fine(String.format("sendImpl - Sent:%s", System.nanoTime()));
 
@@ -266,7 +266,7 @@ public class DBusCommChannel extends CommChannel {
   public CommMessage recvResponseFor(CommMessage request) throws IOException {
     log.info(String.format("recvResponseFor - Called:%s", System.nanoTime()));
     log.fine(String.format("recvResponseFor - Operation name: %s", request.operationName()));
-    
+
     // Fetch matching call to get D-Bus serial
     MethodCall call = (MethodCall) sentMessages.remove(request.id());
     try {
