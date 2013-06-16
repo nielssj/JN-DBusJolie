@@ -211,6 +211,9 @@ public class DBusIntrospector {
       String xml = (String) ret.getParameters()[0];
 
       DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+      factory.setValidating(false);
+      factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+      
       DocumentBuilder b = factory.newDocumentBuilder();
 
       Document d = b.parse(new ByteArrayInputStream(xml.getBytes()));
